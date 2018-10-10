@@ -1,19 +1,25 @@
-from flask import Flask, render_template
+import sqlite3
+import uuid
+
+from flask import Flask
 from flask_socketio import SocketIO, emit
-import sqlite3, uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-con = sqlite3.connect("test.db")
-curs = con.cursor()
-curs.execute("drop table if exists players")
-con.commit()
-con.execute("create table players("
-            "id  string  primary key,"
-            "nickname string not null )")
-con.commit()
+
+def sql(query):
+    con = sqlite3.connect("test.db")
+    curs = con.cursor()
+    curs.execute(query)
+    con.commit()
+
+
+sql("drop table if exists players")
+sql("create table players("
+    "id  string  primary key, "
+    "nickname string not null )")
 
 
 @app.route('/')
