@@ -1,27 +1,15 @@
 import sqlite3
-import uuid
-
 from flask import Flask
 from flask_socketio import SocketIO, emit
+import db_connector
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
+db_connector.create_db()
 
-
-def sql(query):
-    con = sqlite3.connect("test.db")
-    curs = con.cursor()
-    curs.execute(query)
-    con.commit()
-
-
-sql("drop table if exists players")
-sql("create table players("
-    "id  string  primary key, "
-    "nickname string not null )")
-
-
+#
 @app.route('/')
 def index():
     return 'Hello world'
@@ -33,22 +21,19 @@ def con():
     emit('opened')
 
 
-@socketio.on('my event')
-def test_message(message):
-    emit('my response', {'data': message['data']})
-
-
 @socketio.on("add player")
-def add_player(message):
-    con = sqlite3.connect("test.db")
-    curs = con.cursor()
-    curs.execute('INSERT INTO players (id, nickname) values (?,?)', (str(uuid.uuid4()).replace('-', ''), message))
-    con.commit()
+def add_player(nick, avatar):
+    try:
+        db_connector.add_player(nick, avatar)
+    except sqlite3.IntegrityError:
+        return -1, "Невозможно зарегистрировать игрока"
+    return 1, "Ок"
 
 
-@socketio.on('my broadcast event')
-def test_message(message):
-    emit('my response', {'data': message['data']}, broadcast=True)
+@socketio.on("get_player")
+def get_player(nick):
+    res = db_connector.get_player(nick)
+    emit("get_player_resp", res)
 
 
 @socketio.on('disconnect')
