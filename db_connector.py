@@ -55,10 +55,12 @@ def create_db():
 
 
 def get_player(nickname):
-    return sql(f'SELECT * FROM players WHERE nickname = ?', 1, (nickname,))
+    return sql(f'SELECT * FROM players WHERE nickname = ?', 1, (nickname,))[0]
 
 
 def add_player(nick, avatar):
     sql('INSERT INTO players (nickname, avatar) values (?, ?)', 0, (nick, avatar))
 
 
+def add_game(title, esm, egp, money, fabrics_1, fabrics_2):
+    sql('INSERT INTO games VALUES (NULL, 0, 0, 3, 1, title, esm, egp, money, fabrics_1, fabrics_2 )')
