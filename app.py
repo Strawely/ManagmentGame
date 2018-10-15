@@ -39,19 +39,24 @@ def get_player(nick, sid):
 
 
 @socket.on("create_game")
-def create_game(pid, sesid):
+def create_game(pid, sesid, esm, egp, money, fabrics_1, fabrics_2):
     join_room(pid, sid=sesid)
-    game.create_game(pid)
+    game.create_game(pid, esm, egp, money, fabrics_1, fabrics_2)
 
 
 @socket.on("join_game")
-def join_game(game_id, sesid):
-    join_room(game, sid=sesid)
+def join_game(game_id, sesid, pid):
+    join_room(pid, sid=sesid)
+    if game.player_join(pid, game_id):
+        on_start()
+
+
+def on_start(room):
+    emit("game_start", room=room)
 
 
 @socket.on('disconnect')
 def test_disconnect():
-
     print('Client disconnected')
 
 
