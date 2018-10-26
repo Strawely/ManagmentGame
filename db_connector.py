@@ -1,7 +1,9 @@
 import sqlite3
+from game import Game
+from player import PlayerState
 
 
-def sql(query, has_result=0, params=()):
+def sql(query, has_result: bool = False, params=()):
     con = sqlite3.connect("test.db")
     curs = con.cursor()
     if has_result:
@@ -15,9 +17,10 @@ def create_db():
     sql("drop table if exists games")
     sql("drop table if exists player_states")
     sql("drop table if exists credits")
+    sql("DROP TABLE IF EXISTS construction")
 
-    sql("create table players("
-        "id  string  primary key, "
+    sql("create table if not exists players("
+        "id  INTEGER primary key, "
         "nickname string not null unique,"
         "avatar integer)")
 
@@ -33,7 +36,8 @@ def create_db():
         "s_money INTEGER,"
         "s_fabrics_1 INTEGER,"
         "s_fabrics_2 INTEGER,"
-        "max_players INTEGER)")
+        "max_players INTEGER,"
+        "progress INTEGER)")
 
     sql("CREATE TABLE player_states("
         "player_id INTEGER PRIMARY KEY,"
@@ -63,30 +67,48 @@ def create_db():
 
 
 def get_player(nickname):
-    return sql(f'SELECT * FROM players WHERE nickname = ?', 1, (nickname,))[0]
+    return sql(f'SELECT * FROM players WHERE nickname = ?', True, (nickname,))[0]
+
+
+def get_player_state(pid: int) -> PlayerState:
+    return PlayerState(sql(f'SELECT * FROM player_states WHERE player_id = ?', True, pid))
 
 
 def add_player(nick, avatar):
-    sql('INSERT INTO players (nickname, avatar) values (?, ?)', 0, (nick, avatar))
+    sql('INSERT INTO players (nickname, avatar) values (?, ?)', params=(nick, avatar))
 
 
-def add_game(pid, title, esm, egp, money, fabrics_1, fabrics_2):
+def add_game(pid, title, esm, egp, money, fabrics_1, fabrics_2, max_players):
     if title == '':
         title = pid
-    sql(f'INSERT INTO games VALUES (NULL, 0, 0, 3, 1, ?, ?, ?, ?, ?, ?)',
-        params=(title, esm, egp, money, fabrics_1, fabrics_2))
+    sql(f'INSERT INTO games VALUES (NULL, 0, 0, 3, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
+        params=(True, title, esm, egp, money, fabrics_1, fabrics_2, max_players))
 
-    game_id = sql('SELECT id FROM games WHERE isOpened == 1 AND name == ?', 1, title)
+    game_id = sql('SELECT id FROM games WHERE isOpened == ? AND name == ?', True, (True, title))
+
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
-        params=(pid, esm, egp, fabrics_1, fabrics_2, game_id, money))
+        params=(pid, esm, egp, fabrics_1, fabrics_2, game_id[0][0], money))
 
 
-def join_player(pid, gid):
-    start_res = sql(f'SELECT * FROM games WHERE id == ?', params=gid)
-    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=gid)
+def get_game_id(player_id: int):
+    return sql(
+        f"SELECT state.game_id FROM games "
+        f"JOIN player_states state ON games.id = state.game_id "
+        f"WHERE state.player_id = ? AND games.isOpened = ? "
+        f"LIMIT 1", params=(player_id, True))
+
+
+def get_game(game_id: int):
+    return Game(sql(f'SELECT * FROM games WHERE id = ?', True, game_id)[0])
+
+
+def inc_game_progress(game_id: int):
+    sql(f'UPDATE games SET progress = progress + 1 WHERE id = ?', params=game_id)
+
+
+def join_player(pid, game_id: int):
+    game = Game(sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', params=game_id))
+    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=game_id)
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        params=(pid, start_res[6], start_res[7], start_res[9], start_res[10], start_res[0], start_res[8], rang))
-    return rang == start_res[11]
-
-
-
+        params=(pid, game.s_esm, game.s_egp, game.s_fabrics1, game.s_fabrics2, game.id, game.s_money, rang))
+    return rang == game.max_players
