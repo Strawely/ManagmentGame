@@ -1,10 +1,7 @@
-import sqlite3
-
-
 class PlayerState:
     id: int
     rang: int
 
     def __init__(self, query: list):
-        id = query[0]
-        rang = query[7]
+        self.id = query[0]
+        self.rang = query[7]
