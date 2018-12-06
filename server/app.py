@@ -68,6 +68,7 @@ def esm_order(pid: int, price: int, qty: int):
 
 
 def send_esm_approved(orders_approved: list, room: int):
+    # todo Помимо оповещения, нужно внести необходимые изменения в БД
     for order in esm_orders:
         for order_app in orders_approved:
             if order.__eq__(order_app):
@@ -81,18 +82,30 @@ def test_disconnect():
     print('Client disconnected')
 
 
-#@socket.on('produce')
-#def produce(pid: int, quantity: int):
+@socket.on('produce')
+def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
     # get player_state
     # if qty >= player_state.esm
     # give player esm
     # wait for all players
     # emit next stage
+    player_state = db_connector.get_player_state(pid)
+    if player_state.get_egp(quantity, fabrics_1, fabrics_2) == 0:
+        emit("production_error")
+        return
+    game: Game = db_connector.get_game_id(pid)
+    if game.update_progress():
+        emit("wait_egp_request")
+
 
 
 # проверить количество денег
 # создать сущность стройки
-# todo сделать запрос на строку
+# todo Торги по ЕГП
+# todo Выплата ссудного процента
+# todo Погашение ссуд
+# todo Получение ссуд
+# todo сделать запрос на стройку
 #@socket.on('build_request')
 #def build_request(pid: int, isAuto: bool):
 

@@ -1,6 +1,6 @@
 import sqlite3
 from game import Game
-from player import PlayerState
+from player_state import PlayerState
 
 
 def sql(query, has_result: bool = False, params=()):
@@ -71,7 +71,9 @@ def get_player(nickname):
 
 
 def get_player_state(pid: int) -> PlayerState:
-    return PlayerState(sql(f'SELECT * FROM player_states WHERE player_id = ?', True, pid))
+    query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, pid)
+    return PlayerState(query_res[0], query_res[1], query_res[2], query_res[3], query_res[4],
+                       query_res[5], query_res[6], query_res[7])
 
 
 def add_player(nick, avatar):
