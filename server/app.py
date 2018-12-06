@@ -91,13 +91,15 @@ def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
     # emit next stage
     player_state = db_connector.get_player_state(pid)
     if player_state.get_egp(quantity, fabrics_1, fabrics_2) == 0:
-        emit("production_error")
+        emit('production_error')
         return
     game: Game = db_connector.get_game_id(pid)
     if game.update_progress():
-        emit("wait_egp_request")
+        emit('wait_egp_request')
 
 
+@socket.on('egp_request'):
+def egp_request()
 
 # проверить количество денег
 # создать сущность стройки
