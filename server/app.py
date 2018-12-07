@@ -69,7 +69,6 @@ def esm_order(pid: int, price: int, qty: int):
 
 
 def send_esm_approved(orders_approved: list, room: int):
-    # todo Помимо оповещения, нужно внести необходимые изменения в БД
     for order in esm_orders:
         for order_app in orders_approved:
             if order.__eq__(order_app):
@@ -86,14 +85,17 @@ def test_disconnect():
 @socket.on('produce')
 def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
     player_state = db_connector.get_player_state(pid)
-    if player_state.get_egp(quantity, fabrics_1, fabrics_2) == 0:
+    result = player_state.get_egp(quantity, fabrics_1, fabrics_2)
+    if result[0] == 0:
         emit('production_error')
         return
-    game: Game = db_connector.get_game_id(pid)
+    emit('produced', (result[0], result[1]))
+    game: Game = db_connector.get_game(db_connector.get_game_id(pid))
     if game.update_progress():
         emit('wait_egp_request')
 
 
+# метод обработки заявки на ЕГП, тут же произвдится выплата банковского процента
 @socket.on('egp_request')
 def egp_request(pid: int, price: int, qty: int):
     game: Game = db_connector.get_game(db_connector.get_game_id(pid))
@@ -104,27 +106,27 @@ def egp_request(pid: int, price: int, qty: int):
         pay_bank_percent(game)
         # todo Сделать emit с инфой о выплаченных процентах
 
+
 def send_egp_approved(orders_approved: list, room: int):
-    # todo Помимо оповещения, нужно внести необходимые изменения в БД
     for order in esm_orders:
         for order_app in orders_approved:
             if order.__eq__(order_app):
                 esm_orders.remove(order)
     emit("egp_orders_approved", orders_approved, room=room)
 
+
 def pay_bank_percent(game: Game):
     game.pay_bank_percent()
 
 # проверить количество денег
 # создать сущность стройки
-# todo Торги по ЕГП
 # todo Выплата ссудного процента
 # todo Погашение ссуд
 # todo Получение ссуд
-# todo сделать запрос на стройку
-#@socket.on('build_request')
-#def build_request(pid: int, isAuto: bool):
-
+# todo Cделать запрос на стройку
+# todo Ежемесячные издержки
+# @socket.on('build_request')
+# def build_request(pid: int, isAuto: bool):
 
 
 if __name__ == '__main__':

@@ -89,6 +89,7 @@ class Game:
         while count >= 0:
             result.append(orders.pop(0))
             count -= 1
+        db_connector.esm_result(result)
         return result
 
     def start_egp_auction(self, orders: list) -> list:

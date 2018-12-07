@@ -114,3 +114,24 @@ def join_player(pid, game_id: int):
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         params=(pid, game.s_esm, game.s_egp, game.s_fabrics1, game.s_fabrics2, game.id, game.s_money, rang))
     return rang == game.max_players
+
+
+def esm_result(approved_orders: list):
+    for order in approved_orders:
+        ps: PlayerState = get_player_state(order.player_id)
+        ps.esm += order.quantity
+        ps.money -= order.quantity * order.price
+        sql('UPDATE player_states SET esm = ?, money = ? WHERE player_id = ?', params=(ps.esm, ps.money, ps.player_id))
+
+
+def egp_result(approved_orders: list):
+    for order in approved_orders:
+        ps: PlayerState = get_player_state(order.player_id)
+        ps.egp -= order.quantity
+        ps.money += order.quantity * order.price
+        sql('UPDATE player_states SET egp = ?, money = ? WHERE player_id = ?', params=(ps.egp, ps.money, ps.player_id))
+
+
+def egp_produce(ps: PlayerState):
+    sql('UPDATE player_states SET egp = ?, esm = ?, money = ? WHERE player_id = ?',
+        params=(ps.egp, ps.esm, ps.money, ps.player_id))
