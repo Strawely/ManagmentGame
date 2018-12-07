@@ -8,10 +8,11 @@ from order import Order
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socket = SocketIO(app, async_mode="eventlet")
+socket = SocketIO(app, async_mode="gevent")
 db_connector.create_db()
 
 esm_orders: list = []
+egp_orders: list = []
 
 
 @app.route('/')
@@ -64,7 +65,7 @@ def esm_order(pid: int, price: int, qty: int):
     is_senior: bool = db_connector.get_player_state(pid).rang == game.turn_num % game.max_players
     esm_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
-        send_esm_approved(game.start_auction(esm_orders), game.id)
+        send_esm_approved(game.start_esm_auction(esm_orders), game.id)
 
 
 def send_esm_approved(orders_approved: list, room: int):
@@ -84,11 +85,6 @@ def test_disconnect():
 
 @socket.on('produce')
 def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
-    # get player_state
-    # if qty >= player_state.esm
-    # give player esm
-    # wait for all players
-    # emit next stage
     player_state = db_connector.get_player_state(pid)
     if player_state.get_egp(quantity, fabrics_1, fabrics_2) == 0:
         emit('production_error')
@@ -98,8 +94,26 @@ def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
         emit('wait_egp_request')
 
 
-@socket.on('egp_request'):
-def egp_request()
+@socket.on('egp_request')
+def egp_request(pid: int, price: int, qty: int):
+    game: Game = db_connector.get_game(db_connector.get_game_id(pid))
+    is_senior: bool = db_connector.get_player_state(pid).rang == game.turn_num % game.max_players
+    egp_orders.append(Order(game.id, pid, price, qty, is_senior))
+    if game.update_progress():
+        send_egp_approved(game.start_egp_auction(egp_orders), game.id)
+        pay_bank_percent(game)
+        # todo Сделать emit с инфой о выплаченных процентах
+
+def send_egp_approved(orders_approved: list, room: int):
+    # todo Помимо оповещения, нужно внести необходимые изменения в БД
+    for order in esm_orders:
+        for order_app in orders_approved:
+            if order.__eq__(order_app):
+                esm_orders.remove(order)
+    emit("egp_orders_approved", orders_approved, room=room)
+
+def pay_bank_percent(game: Game):
+    game.pay_bank_percent()
 
 # проверить количество денег
 # создать сущность стройки

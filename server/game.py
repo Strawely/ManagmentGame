@@ -63,12 +63,40 @@ class Game:
             game_orders[tmp_index - 1] = a
         return game_orders
 
-    def start_auction(self, orders: list) -> list:
+    # можно зарефакторить через передачу лямбды
+    def sort_esm_orders(self) -> list:
+        game_orders: list = self.esm_orders.copy()
+        # game_orders.sort(key=lambda obj: obj[2])
+        game_orders.sort(key=lambda obj1, obj2: obj1.price <= obj2.price)
+        tmp_index: int
+        for order in game_orders:
+            if order.is_senior:
+                tmp_index = game_orders.index(order)
+                break
+        if tmp_index != 0 and game_orders[tmp_index].price == game_orders[tmp_index - 1].price:
+            a = game_orders[tmp_index]
+            game_orders[tmp_index] = game_orders[tmp_index - 1]
+            game_orders[tmp_index - 1] = a
+        return game_orders
+
+    def start_esm_auction(self, orders: list) -> list:
         for order in orders:
             if order.game_id == self.id:
                 self.esm_orders.append(order)
         orders = self.sort_esm_orders()
         count = self.esm_auction(orders)
+        result = []
+        while count >= 0:
+            result.append(orders.pop(0))
+            count -= 1
+        return result
+
+    def start_egp_auction(self, orders: list) -> list:
+        for order in orders:
+            if order.game_id == self.id:
+                self.esm_orders.append(order)
+        orders = self.sort_egp_orders()
+        count = self.egp_auction(orders)
         result = []
         while count >= 0:
             result.append(orders.pop(0))
@@ -86,6 +114,16 @@ class Game:
                 return index - 1
         return len(orders) - 1
 
+    def egp_auction(self, orders: list) -> int:
+        esm_left = self.market[self.market_lvl - 1][1] * self.max_players
+        for index, order in enumerate(orders):
+            if esm_left - order[3] >= 0:
+                # emit('accepted', order[1], room=order[0])
+                esm_left -= order[3]
+            else:
+                return index - 1
+        return len(orders) - 1
+
     # инкрементируем количество игроков, сделавших ход и проверям, равно ли максимальному
     def update_progress(self) -> bool:
         db_connector.inc_game_progress(self.id)
@@ -93,3 +131,6 @@ class Game:
         if self.progress != self.max_players:
             return False
         return True
+
+    def pay_bank_percent(self):
+
