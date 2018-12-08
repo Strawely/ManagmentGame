@@ -5,6 +5,7 @@ import db_connector
 import game
 from game import Game
 from order import Order
+from player import Player
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -103,8 +104,7 @@ def egp_request(pid: int, price: int, qty: int):
     egp_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
         send_egp_approved(game.start_egp_auction(egp_orders), game.id)
-        emit('paid_percents', pay_bank_percent(game))  # в зависимости от значения rang можно для каждого
-        #  игрока получить выплаченные проценты
+        pay_bank_percent(game, db_connector.get_game_id(pid))
 
 
 def send_egp_approved(orders_approved: list, room: int):
@@ -115,11 +115,18 @@ def send_egp_approved(orders_approved: list, room: int):
     emit("egp_orders_approved", orders_approved, room=room)
 
 
-def pay_bank_percent(game: Game):
-    game.pay_bank_percent()
+def pay_bank_percent(game: Game, room: int):
+    emit('paid_percents', game.pay_bank_percent(), room=room)  # в зависимости от значения rang можно для каждого
+    #  игрока получить выплаченные проценты
+    emit('wait_credit_payoff', room=room)
 
 
-# todo Погашение ссуд
+@socket.on('credit_payoff')
+def credit_payoff(pid: int):
+    player: Player = db_connector.get_player_pid(pid)
+    emit('paid_credit_sum', player.check_credit_payoff())
+
+
 # todo Получение ссуд
 # todo Cделать запрос на стройку
 # todo Ежемесячные издержки

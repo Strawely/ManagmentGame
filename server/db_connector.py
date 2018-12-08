@@ -1,6 +1,7 @@
 import sqlite3
 from game import Game
 from player_state import PlayerState
+from player import Player
 
 
 def sql(query, has_result: bool = False, params=()):
@@ -152,3 +153,12 @@ def get_credits(pid: int):
 
 def set_money(pid: int, amount: int):
     sql('UPDATE player_states SET money = ? WHERE player_id = ?', params=(amount, pid))
+
+
+def credit_payoff(credit_id: int):
+    sql('DELETE FROM credits WHERE id = ?', params=credit_id)
+
+
+def get_player_pid(pid: int) -> Player:
+    query = sql('SELECT * FROM players WHERE id = ?', True, pid)
+    return Player(query[0], query[1], query[2])
