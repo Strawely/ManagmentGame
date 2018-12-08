@@ -62,7 +62,7 @@ def on_start(room: int, game: Game):
 @socket.on('esm_order')
 def esm_order(pid: int, price: int, qty: int):
     game: Game = db_connector.get_game(db_connector.get_game_id(pid))
-    is_senior: bool = db_connector.get_player_state(pid).rang == game.turn_num % game.max_players
+    is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
     esm_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
         send_esm_approved(game.start_esm_auction(esm_orders), game.id)
@@ -84,7 +84,7 @@ def test_disconnect():
 
 @socket.on('produce')
 def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
-    player_state = db_connector.get_player_state(pid)
+    player_state = db_connector.get_player_state_pid(pid)
     result = player_state.get_egp(quantity, fabrics_1, fabrics_2)
     if result[0] == 0:
         emit('production_error')
@@ -99,12 +99,12 @@ def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
 @socket.on('egp_request')
 def egp_request(pid: int, price: int, qty: int):
     game: Game = db_connector.get_game(db_connector.get_game_id(pid))
-    is_senior: bool = db_connector.get_player_state(pid).rang == game.turn_num % game.max_players
+    is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
     egp_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
         send_egp_approved(game.start_egp_auction(egp_orders), game.id)
-        pay_bank_percent(game)
-        # todo Сделать emit с инфой о выплаченных процентах
+        emit('paid_percents', pay_bank_percent(game))  # в зависимости от значения rang можно для каждого
+        #  игрока получить выплаченные проценты
 
 
 def send_egp_approved(orders_approved: list, room: int):
@@ -118,13 +118,13 @@ def send_egp_approved(orders_approved: list, room: int):
 def pay_bank_percent(game: Game):
     game.pay_bank_percent()
 
-# проверить количество денег
-# создать сущность стройки
-# todo Выплата ссудного процента
+
 # todo Погашение ссуд
 # todo Получение ссуд
 # todo Cделать запрос на стройку
 # todo Ежемесячные издержки
+# проверить количество денег
+# создать сущность стройки
 # @socket.on('build_request')
 # def build_request(pid: int, isAuto: bool):
 

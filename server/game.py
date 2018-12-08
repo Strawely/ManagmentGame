@@ -133,5 +133,13 @@ class Game:
             return False
         return True
 
-    def pay_bank_percent(self):
-
+    # возвращает список сумм (изъятая сумма у каждого игрока)
+    def pay_bank_percent(self) -> list:
+        # получить из бд по каждому игроку игры сумму ссуд и получить 1%
+        ps: list = db_connector.get_player_state_gid(self.id)
+        result: list = []
+        for state in ps:
+            sum = db_connector.get_credits(state.player_id)
+            result.append(int(sum / 100))
+            db_connector.set_money(state.player_id, state.money - int(sum/100))
+        return result

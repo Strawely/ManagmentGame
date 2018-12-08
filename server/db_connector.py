@@ -70,10 +70,19 @@ def get_player(nickname):
     return sql(f'SELECT * FROM players WHERE nickname = ?', True, (nickname,))[0]
 
 
-def get_player_state(pid: int) -> PlayerState:
+def get_player_state_pid(pid: int) -> PlayerState:
     query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, pid)
     return PlayerState(query_res[0], query_res[1], query_res[2], query_res[3], query_res[4],
                        query_res[5], query_res[6], query_res[7])
+
+
+# возвращает все сущности состояние_игрока привязанные к игре
+def get_player_state_gid(gid: int) -> list:
+    query_res = sql(f'SELECT * FROM player_states WHERE game_id = ?', True, gid)
+    result: list = []
+    for line in query_res:
+        result.append(PlayerState(line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]))
+    return result
 
 
 def add_player(nick, avatar):
@@ -118,7 +127,7 @@ def join_player(pid, game_id: int):
 
 def esm_result(approved_orders: list):
     for order in approved_orders:
-        ps: PlayerState = get_player_state(order.player_id)
+        ps: PlayerState = get_player_state_pid(order.player_id)
         ps.esm += order.quantity
         ps.money -= order.quantity * order.price
         sql('UPDATE player_states SET esm = ?, money = ? WHERE player_id = ?', params=(ps.esm, ps.money, ps.player_id))
@@ -126,7 +135,7 @@ def esm_result(approved_orders: list):
 
 def egp_result(approved_orders: list):
     for order in approved_orders:
-        ps: PlayerState = get_player_state(order.player_id)
+        ps: PlayerState = get_player_state_pid(order.player_id)
         ps.egp -= order.quantity
         ps.money += order.quantity * order.price
         sql('UPDATE player_states SET egp = ?, money = ? WHERE player_id = ?', params=(ps.egp, ps.money, ps.player_id))
@@ -135,3 +144,11 @@ def egp_result(approved_orders: list):
 def egp_produce(ps: PlayerState):
     sql('UPDATE player_states SET egp = ?, esm = ?, money = ? WHERE player_id = ?',
         params=(ps.egp, ps.esm, ps.money, ps.player_id))
+
+
+def get_credits(pid: int):
+    return sql('SELECT credits.amount FROM credits WHERE player_id = ?', True, pid)
+
+
+def set_money(pid: int, amount: int):
+    sql('UPDATE player_states SET money = ? WHERE player_id = ?', params=(amount, pid))
