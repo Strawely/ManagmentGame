@@ -29,36 +29,16 @@ public class MainActivity extends AppCompatActivity {
     private void initSocket(){
         try {
             socket = IO.socket("http://10.0.3.2:5000");
-            socket.on("success", new Emitter.Listener() {
-                @Override
-                public void call(Object... args) {
-                    try {
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                TextView result = findViewById(R.id.connectionResult);
-                                result.setText("success");
-                            }
-                        });
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
+            socket.connect();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void onTestConnectionClick(View view) {
-        socket.connect();
-//        socket.disconnect();
-    }
-
     public void onEnterBtnClick(View view) {
-        if(!socket.connected()) socket.connect();
-        EditText loginEditText = findViewById(R.id.editTextLogin);
-        socket.emit("register_player", loginEditText.getText(), 0);
+        Intent intent = new Intent(this, AuthActivity.class);
+        SocketHandler.setSocket(socket);
+        startActivity(intent);
     }
 
     public void onPlayBtnClick(View view) {

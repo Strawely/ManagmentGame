@@ -1,4 +1,5 @@
 import db_connector
+import json
 
 
 class Player:
@@ -24,3 +25,6 @@ class Player:
         current_money = db_connector.get_player_state_pid(self.id).money
         db_connector.set_money(self.id, current_money - amount)
         db_connector.credit_payoff(credit_id)
+
+    def get_json(self):
+        return [self.id, self.nickname, self.avatar]

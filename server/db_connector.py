@@ -67,8 +67,9 @@ def create_db():
         "FOREIGN KEY (player_id) REFERENCES player_states(player_id))")
 
 
-def get_player(nickname):
-    return sql(f'SELECT * FROM players WHERE nickname = ?', True, (nickname,))[0]
+def get_player(nickname: str) -> Player:
+    query = sql('SELECT * FROM players WHERE nickname = ?', True, (nickname,))[0]
+    return Player(query[0], query[1], query[2])
 
 
 def get_player_state_pid(pid: int) -> PlayerState:

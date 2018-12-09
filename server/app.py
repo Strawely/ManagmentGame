@@ -28,19 +28,23 @@ def con():
     emit('success')
 
 
+def encode_player(player: Player):
+    return player.id, player.nickname, player.avatar
+
+
 @socket.on("register_player")
-def add_player(nick, avatar):
+def add_player(nick: str, avatar: int):
     try:
         db_connector.add_player(nick, avatar)
     except sqlite3.IntegrityError:
         return -1, "Невозможно зарегистрировать игрока"
-    return db_connector.get_player(nick), "Ok"
+    return db_connector.get_player(nick).get_json()
 
 
-@socket.on("get_player")
-def get_player(nick):
-    res = db_connector.get_player(nick)
-    emit("get_player_resp", res)
+# @socket.on("get_player")
+# def get_player(nick):
+#     res = db_connector.get_player(nick)
+#     emit("get_player_resp", res)
 
 
 @socket.on('get_games_list')
