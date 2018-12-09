@@ -6,6 +6,7 @@ import game
 from game import Game
 from order import Order
 from player import Player
+from player_state import PlayerState
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -62,7 +63,7 @@ def on_start(room: int, game: Game):
 
 @socket.on('esm_order')
 def esm_order(pid: int, price: int, qty: int):
-    game: Game = db_connector.get_game(db_connector.get_game_id(pid))
+    game: Game = db_connector.get_game_pid(pid)
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
     esm_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
@@ -91,7 +92,7 @@ def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
         emit('production_error')
         return
     emit('produced', (result[0], result[1]))
-    game: Game = db_connector.get_game(db_connector.get_game_id(pid))
+    game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
         emit('wait_egp_request')
 
@@ -99,7 +100,7 @@ def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
 # метод обработки заявки на ЕГП, тут же произвдится выплата банковского процента
 @socket.on('egp_request')
 def egp_request(pid: int, price: int, qty: int):
-    game: Game = db_connector.get_game(db_connector.get_game_id(pid))
+    game: Game = db_connector.get_game_pid(pid)
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
     egp_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
@@ -125,15 +126,33 @@ def pay_bank_percent(game: Game, room: int):
 def credit_payoff(pid: int):
     player: Player = db_connector.get_player_pid(pid)
     emit('paid_credit_sum', player.check_credit_payoff())
+    game: Game = db_connector.get_game_pid(pid)
+    if game.update_progress():
+        emit('wait_take_credit')
 
 
-# todo Получение ссуд
-# todo Cделать запрос на стройку
-# todo Ежемесячные издержки
-# проверить количество денег
-# создать сущность стройки
-# @socket.on('build_request')
-# def build_request(pid: int, isAuto: bool):
+@socket.on('take_credit')
+def take_credit(pid: int, amount: int):
+    ps: PlayerState = db_connector.get_player_state_pid(pid)
+    ps.take_credit(amount)
+    if db_connector.get_game_pid(pid).update_progress():
+        emit('wait_build_request')
+
+
+@socket.on('build_request')
+def build_request(pid: int, is_auto: bool):
+    ps: PlayerState = db_connector.get_player_state_pid(pid)
+    ps.build_fabric(is_auto)
+    if db_connector.get_game_pid(pid).update_progress():
+        emit('wait_next_turn', room=db_connector.get_game_id(pid))
+
+
+@socket.on('next_turn')
+def next_turn(pid: int):
+    ps: PlayerState = db_connector.get_player_state_pid(pid)
+    ps.pay_taxes()
+    if ps.money < 0:
+        emit('game_over', pid, room=db_connector.get_game_id(pid))
 
 
 if __name__ == '__main__':

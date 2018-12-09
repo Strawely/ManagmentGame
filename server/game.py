@@ -143,3 +143,6 @@ class Game:
             result.append(int(sum / 100))
             db_connector.set_money(state.player_id, state.money - int(sum/100))
         return result
+
+    def inc_game_turn(self):
+        db_connector.inc_game_turn(self.id)

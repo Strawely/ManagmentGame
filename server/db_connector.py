@@ -107,7 +107,7 @@ def get_game_id(player_id: int):
         f"SELECT state.game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
         f"WHERE state.player_id = ? AND games.isOpened = ? "
-        f"LIMIT 1", params=(player_id, True))
+        f"LIMIT 1", params=(player_id, True))[0]
 
 
 def get_game(game_id: int):
@@ -162,3 +162,19 @@ def credit_payoff(credit_id: int):
 def get_player_pid(pid: int) -> Player:
     query = sql('SELECT * FROM players WHERE id = ?', True, pid)
     return Player(query[0], query[1], query[2])
+
+
+def take_credit(pid: int, amount: int, month: int):
+    sql('INSERT INTO credits VALUES (NULL, ?, ?, ?)', params=(pid, amount, month))
+
+
+def build_fabric(pid: int, is_auto: bool, month: int):
+    sql('INSERT INTO construction VALUES (NULL, ?, ?, ?)', params=(pid, is_auto, month))
+
+
+def inc_game_turn(game_id: int):
+    sql('UPDATE games SET turn_num = turn_num + 1 WHERE id = ?', params=game_id)
+
+
+def get_game_pid(pid: int) -> Game:
+    return get_game(get_game_id(pid))

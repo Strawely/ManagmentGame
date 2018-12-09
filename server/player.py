@@ -13,7 +13,7 @@ class Player:
 
     # возвращает выплаченную сумму
     def check_credit_payoff(self) -> int:
-        current_month = db_connector.get_game(db_connector.get_game_id(self.id)).turn_num
+        current_month = db_connector.get_game_pid(self.id).turn_num
         result = 0
         for credit in db_connector.get_credits(self.id):
             if credit[3] == current_month - 12:
