@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">ManagmentGame</string>
     <string name="enter_btn">Войти</string>
-    <string name="play_btn">Играть!</string>
+    <string name="play_btn">Начать игру!</string>
+    <string name="welcome_text_default">Авторизуйтесь</string>
 </resources>
