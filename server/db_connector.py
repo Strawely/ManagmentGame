@@ -30,7 +30,7 @@ def create_db():
         "turn_num INTEGER,"
         "turn_stage INTEGER,"
         "market_lvl INTEGER,"
-        "isOpened BOOLEAN,"
+        "isOpened INTEGER,"
         "name VARCHAR,"
         "s_esm INTEGER,"
         "s_egp INTEGER,"
@@ -112,6 +112,10 @@ def get_game_id(player_id: int):
 
 def get_game(game_id: int):
     return Game(sql(f'SELECT * FROM games WHERE id = ?', True, game_id)[0])
+
+
+def get_games_list() -> list:
+    return sql('SELECT * FROM games WHERE isOpened = 1', True)
 
 
 def inc_game_progress(game_id: int):

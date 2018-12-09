@@ -25,7 +25,7 @@ def index():
 @socket.on("connect")
 def con():
     print('Connected')
-    emit('opened')
+    emit('success')
 
 
 @socket.on("register_player")
@@ -41,6 +41,11 @@ def add_player(nick, avatar):
 def get_player(nick):
     res = db_connector.get_player(nick)
     emit("get_player_resp", res)
+
+
+@socket.on('get_games_list')
+def get_games_list():
+    return db_connector.get_games_list()
 
 
 @socket.on("create_game")

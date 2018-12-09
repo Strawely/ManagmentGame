@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ManagmentGame</string>
+    <string name="enter_btn">Войти</string>
+    <string name="play_btn">Играть!</string>
 </resources>
