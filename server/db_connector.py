@@ -15,7 +15,7 @@ def sql(query, has_result: bool = False, params=()):
 
 def create_db():
     # sql("drop table if exists players")
-    sql("drop table if exists games")
+    # sql("drop table if exists games")
     sql("drop table if exists player_states")
     sql("drop table if exists credits")
     sql("DROP TABLE IF EXISTS construction")
@@ -25,7 +25,7 @@ def create_db():
         "nickname string not null unique,"
         "avatar integer)")
 
-    sql("CREATE TABLE games("
+    sql("CREATE TABLE IF NOT EXISTS games("
         "id INTEGER PRIMARY KEY,"
         "turn_num INTEGER,"
         "turn_stage INTEGER,"
@@ -95,7 +95,7 @@ def add_game(pid, title, esm, egp, money, fabrics_1, fabrics_2, max_players):
     if title == '':
         title = pid
     sql(f'INSERT INTO games VALUES (NULL, 0, 0, 3, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
-        params=(True, title, esm, egp, money, fabrics_1, fabrics_2, max_players))
+        params=(1, title, esm, egp, money, fabrics_1, fabrics_2, max_players))
 
     game_id = sql('SELECT id FROM games WHERE isOpened == ? AND name == ?', True, (True, title))
 
