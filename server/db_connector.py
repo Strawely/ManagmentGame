@@ -67,20 +67,23 @@ def create_db():
         "FOREIGN KEY (player_id) REFERENCES player_states(player_id))")
 
 
-def get_player(nickname: str) -> Player:
-    query = sql('SELECT * FROM players WHERE nickname = ?', True, (nickname,))[0]
-    return Player(query[0], query[1], query[2])
+def get_player(nickname: str):
+    query = sql('SELECT * FROM players WHERE nickname = ?', True, (nickname,))
+    if query.__len__() > 0:
+        return Player(query[0][0], query[0][1], query[0][2])
+    else:
+        return None
 
 
 def get_player_state_pid(pid: int) -> PlayerState:
-    query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, pid)
+    query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, (pid,))
     return PlayerState(query_res[0], query_res[1], query_res[2], query_res[3], query_res[4],
                        query_res[5], query_res[6], query_res[7])
 
 
 # возвращает все сущности состояние_игрока привязанные к игре
 def get_player_state_gid(gid: int) -> list:
-    query_res = sql(f'SELECT * FROM player_states WHERE game_id = ?', True, gid)
+    query_res = sql(f'SELECT * FROM player_states WHERE game_id = ?', True, (gid,))
     result: list = []
     for line in query_res:
         result.append(PlayerState(line[0], line[1], line[2], line[3], line[4], line[5], line[6], line[7]))
@@ -108,11 +111,11 @@ def get_game_id(player_id: int):
         f"SELECT state.game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
         f"WHERE state.player_id = ? AND games.isOpened = ? "
-        f"LIMIT 1", params=(player_id, True))[0]
+        f"LIMIT 1", params=(player_id, 1))[0]
 
 
 def get_game(game_id: int):
-    return Game(sql(f'SELECT * FROM games WHERE id = ?', True, game_id)[0])
+    return Game(sql(f'SELECT * FROM games WHERE id = ?', True, (game_id,))[0])
 
 
 def get_games_list() -> list:
@@ -120,12 +123,12 @@ def get_games_list() -> list:
 
 
 def inc_game_progress(game_id: int):
-    sql(f'UPDATE games SET progress = progress + 1 WHERE id = ?', params=game_id)
+    sql(f'UPDATE games SET progress = progress + 1 WHERE id = ?', params=(game_id,))
 
 
 def join_player(pid, game_id: int):
-    game = Game(sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', params=game_id))
-    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=game_id)
+    game = Game(sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', params=(game_id,)))
+    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=(game_id,))
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         params=(pid, game.s_esm, game.s_egp, game.s_fabrics1, game.s_fabrics2, game.id, game.s_money, rang))
     return rang == game.max_players
@@ -153,7 +156,7 @@ def egp_produce(ps: PlayerState):
 
 
 def get_credits(pid: int):
-    return sql('SELECT credits.amount FROM credits WHERE player_id = ?', True, pid)
+    return sql('SELECT credits.amount FROM credits WHERE player_id = ?', True, (pid,))
 
 
 def set_money(pid: int, amount: int):
@@ -161,11 +164,11 @@ def set_money(pid: int, amount: int):
 
 
 def credit_payoff(credit_id: int):
-    sql('DELETE FROM credits WHERE id = ?', params=credit_id)
+    sql('DELETE FROM credits WHERE id = ?', params=(credit_id,))
 
 
 def get_player_pid(pid: int) -> Player:
-    query = sql('SELECT * FROM players WHERE id = ?', True, pid)
+    query = sql('SELECT * FROM players WHERE id = ?', True, (pid,))
     return Player(query[0], query[1], query[2])
 
 
@@ -178,8 +181,12 @@ def build_fabric(pid: int, is_auto: bool, month: int):
 
 
 def inc_game_turn(game_id: int):
-    sql('UPDATE games SET turn_num = turn_num + 1 WHERE id = ?', params=game_id)
+    sql('UPDATE games SET turn_num = turn_num + 1 WHERE id = ?', params=(game_id,))
 
 
 def get_game_pid(pid: int) -> Game:
     return get_game(get_game_id(pid))
+
+
+def del_player_state(pid: int):
+    sql('DELETE FROM player_states WHERE player_id = ?', params=(pid,))

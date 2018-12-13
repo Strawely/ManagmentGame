@@ -1,6 +1,6 @@
 import sqlite3
 from flask import Flask
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 import db_connector
 import game
 from game import Game
@@ -32,13 +32,17 @@ def encode_player(player: Player):
     return player.id, player.nickname, player.avatar
 
 
+# 0 - удалось добавить, 1 - уже существует, -1 - ошибка
 @socket.on("register_player")
 def add_player(nick: str, avatar: int):
     try:
-        db_connector.add_player(nick, avatar)
+        if db_connector.get_player(nick) is None:
+            db_connector.add_player(nick, avatar)
+            return 0, db_connector.get_player(nick).get_json()
+        else:
+            return 1, db_connector.get_player(nick).get_json()
     except sqlite3.IntegrityError:
         return -1, "Невозможно зарегистрировать игрока"
-    return db_connector.get_player(nick).get_json()
 
 
 # @socket.on("get_player")
@@ -63,6 +67,17 @@ def join_game(game_id, sesid, pid):
     join_room(game_id, sesid)
     if game.player_join(pid, game_id):
         on_start(game_id, db_connector.get_game(game_id))
+
+
+@socket.on('leave_game')
+def leave_game(pid: int, sid: int):
+    leave_room(db_connector.get_game_id(pid), sid)
+    db_connector.del_player_state(pid)
+
+
+@socket.on('senior_leave')
+def senior_leave(pid: int, game_id):
+    emit('game_canceled', room=game_id)
 
 
 def on_start(room: int, game: Game):
@@ -163,6 +178,7 @@ def next_turn(pid: int):
     if ps.money < 0:
         emit('game_over', pid, room=db_connector.get_game_id(pid))
 
-
+# todo define bankrupts
+# todo winner definition mechanism
 if __name__ == '__main__':
     socket.run(app, host='0.0.0.0')

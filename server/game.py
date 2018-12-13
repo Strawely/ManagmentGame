@@ -146,3 +146,7 @@ class Game:
 
     def inc_game_turn(self):
         db_connector.inc_game_turn(self.id)
+
+    def get_json(self) -> list:
+        return [self.id, self.turn_num, self.turn_stage, self.market_lvl, self.isOpened, self.name, self.s_esm,
+                self.s_egp, self.s_money, self.s_fabrics1, self.s_fabrics2, self.max_players, self.progress]
