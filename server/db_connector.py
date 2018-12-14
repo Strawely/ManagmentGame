@@ -106,7 +106,7 @@ def add_game(pid, title, esm, egp, money, fabrics_1, fabrics_2, max_players):
         params=(pid, esm, egp, fabrics_1, fabrics_2, game_id[0][0], money))
 
 
-def get_game_id(player_id: int):
+def get_game_id(player_id: int) -> int:
     return sql(
         f"SELECT state.game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
@@ -114,7 +114,7 @@ def get_game_id(player_id: int):
         f"LIMIT 1", params=(player_id, 1))[0]
 
 
-def get_game(game_id: int):
+def get_game(game_id: int) -> Game:
     return Game(sql(f'SELECT * FROM games WHERE id = ?', True, (game_id,))[0])
 
 
@@ -156,7 +156,7 @@ def egp_produce(ps: PlayerState):
 
 
 def get_credits(pid: int):
-    return sql('SELECT credits.amount FROM credits WHERE player_id = ?', True, (pid,))
+    return sql('SELECT * FROM credits WHERE player_id = ?', True, (pid,))
 
 
 def set_money(pid: int, amount: int):

@@ -194,10 +194,10 @@ def bankrupt_leave(pid: int):
 
 
 def define_winner(game_id: int):
+    scores = db_connector.get_game(game_id).get_score_list()
+    emit('scores_list', scores)
 
 
-
-# todo winner definition mechanism
-# todo пофиксить возвращаемый тип sql запросов
+# todo располовинить стоимость фабрик
 if __name__ == '__main__':
     socket.run(app, host='0.0.0.0')

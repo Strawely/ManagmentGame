@@ -57,7 +57,7 @@ class Game:
     def sort_esm_orders(self) -> list:
         game_orders: list = self.esm_orders.copy()
         # game_orders.sort(key=lambda obj: obj[2])
-        game_orders.sort(key=lambda obj1, obj2: obj1.price >= obj2.price)
+        game_orders.sort(key=self.sort_esm, reverse=True)
         tmp_index: int
         for order in game_orders:
             if order.is_senior:
@@ -69,11 +69,14 @@ class Game:
             game_orders[tmp_index - 1] = a
         return game_orders
 
+    def sort_esm(self, o: Order):
+        return o.price
+
     # можно зарефакторить через передачу лямбды
-    def sort_esm_orders(self) -> list:
+    def sort_egp_orders(self) -> list:
         game_orders: list = self.esm_orders.copy()
         # game_orders.sort(key=lambda obj: obj[2])
-        game_orders.sort(key=lambda obj1, obj2: obj1.price <= obj2.price)
+        game_orders.sort(key=self.sort_esm)
         tmp_index: int
         for order in game_orders:
             if order.is_senior:
@@ -183,5 +186,18 @@ class Game:
         return new_lvl
 
     def get_score_list(self):
-        player_states: list = db_connector.get_player_state_gid(self.id)
+        result: list = []
+        for ps in db_connector.get_player_state_gid(self.id):
+            sum = ps.fabrics_1 * 5000 + ps.fabrics_2 * 10000 + ps.esm * self.market[self.market_lvl + 1][2] + \
+                  ps.egp * self.market[self.market_lvl + 1][4]
+            for credit in db_connector.get_credits(ps.player_id):
+                sum += credit[2]
+            sum += ps.money
+            result.append([ps.player_id, sum])
+        return self.sort_results(result)
 
+    def compare_scores(self, score):
+        return score[1]
+
+    def sort_results(self, score_list: list) -> list:
+        score_list.sort(key=self.compare_scores, reverse=True)
