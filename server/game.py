@@ -181,3 +181,7 @@ class Game:
             new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 12, 1 / 12, 1 / 6, 1 / 3, 1 / 3])
         db_connector.new_market_lvl(self.id, new_lvl)
         return new_lvl
+
+    def get_score_list(self):
+        player_states: list = db_connector.get_player_state_gid(self.id)
+

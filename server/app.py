@@ -193,6 +193,10 @@ def bankrupt_leave(pid: int):
     leave_game(pid)
 
 
+def define_winner(game_id: int):
+
+
+
 # todo winner definition mechanism
 # todo пофиксить возвращаемый тип sql запросов
 if __name__ == '__main__':
