@@ -189,8 +189,13 @@ def define_bankrupts(pid: int):
 
 
 @socket.on('bankrupt_leave')
-def bankrupt_leave(pid: int):
-    leave_game(pid)
+def bankrupt_leave(pid: int, sid):
+    leave_room(db_connector.get_game_id(pid), sid)
+    db_connector.del_player_state(pid)
+    db_connector.dec_max_players(db_connector.get_game_id(pid))
+    if db_connector.get_game_pid(pid).max_players == 1:
+        emit('game_over')
+        define_winner(db_connector.get_game_id(pid))
 
 
 def define_winner(game_id: int):

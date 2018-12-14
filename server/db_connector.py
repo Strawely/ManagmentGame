@@ -192,6 +192,10 @@ def del_player_state(pid: int):
     sql('DELETE FROM player_states WHERE player_id = ?', params=(pid,))
 
 
+def dec_max_players(game_id: int):
+    sql('UPDATE games SET max_players = max_players - 1 WHERE id = ?', params=(game_id,))
+
+
 def zero_progress(game_id: int):
     sql('UPDATE games SET progress = 0 WHERE id = ?', params=(game_id,))
 
