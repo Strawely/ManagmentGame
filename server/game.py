@@ -1,5 +1,6 @@
 import db_connector
 from order import Order
+import random
 
 
 def create_game(player_id, esm, egp, money, fabrics_1, fabrics_2, max_players, title=''):
@@ -16,7 +17,7 @@ class Game:
     turn_num: int = 0
     turn_stage: int = 0
     market_lvl: int = 0
-    isOpened: bool = False
+    isOpened: int = 0
     name: str = ''
     s_esm: int = 0
     s_egp: int = 0
@@ -47,6 +48,11 @@ class Game:
         self.s_fabrics2 = query[10]
         self.max_players = query[11]
         self.progress = query[12]
+        self.market = ((1, 1.0 * self.max_players, 800, 3.0 * self.max_players, 6500),
+                       (2, 1.5 * self.max_players, 650, 2.5 * self.max_players, 6000),
+                       (3, 2.0 * self.max_players, 500, 2.0 * self.max_players, 5500),
+                       (4, 2.5 * self.max_players, 400, 1.5 * self.max_players, 5000),
+                       (5, 3.0 * self.max_players, 300, 1.0 * self.max_players, 4500))
 
     def sort_esm_orders(self) -> list:
         game_orders: list = self.esm_orders.copy()
@@ -129,8 +135,10 @@ class Game:
     def update_progress(self) -> bool:
         db_connector.inc_game_progress(self.id)
         self.progress += 1
-        if self.progress != self.max_players:
+        if self.progress != self.max_players - 1:
             return False
+        db_connector.zero_progress(self.id)
+        self.progress = 0
         return True
 
     # возвращает список сумм (изъятая сумма у каждого игрока)
@@ -141,7 +149,7 @@ class Game:
         for state in ps:
             sum = db_connector.get_credits(state.player_id)[2]
             result.append(int(sum / 100))
-            db_connector.set_money(state.player_id, state.money - int(sum/100))
+            db_connector.set_money(state.player_id, state.money - int(sum / 100))
         return result
 
     def inc_game_turn(self):
@@ -150,3 +158,26 @@ class Game:
     def get_json(self) -> list:
         return [self.id, self.turn_num, self.turn_stage, self.market_lvl, self.isOpened, self.name, self.s_esm,
                 self.s_egp, self.s_money, self.s_fabrics1, self.s_fabrics2, self.max_players, self.progress]
+
+    def get_bankrupts(self) -> list:
+        result = []
+        player_states = db_connector.get_player_state_gid(self.id)
+        for ps in player_states:
+            if ps.money <= 0:
+                result.append(ps.player_id)
+        return result
+
+    def get_new_market_lvl(self) -> int:
+        new_lvl = 3
+        if self.market_lvl == 1:
+            new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 3, 1 / 3, 1 / 6, 1 / 12, 1 / 12])
+        elif self.market_lvl == 2:
+            new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 4, 1 / 3, 1 / 4, 1 / 12, 1 / 12])
+        elif self.market_lvl == 3:
+            new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 12, 1 / 4, 1 / 3, 1 / 4, 1 / 12])
+        elif self.market_lvl == 4:
+            new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 12, 1 / 12, 1 / 4, 1 / 3, 1 / 4])
+        elif self.market_lvl == 5:
+            new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 12, 1 / 12, 1 / 6, 1 / 3, 1 / 3])
+        db_connector.new_market_lvl(self.id, new_lvl)
+        return new_lvl

@@ -76,8 +76,9 @@ def leave_game(pid: int, sid: int):
 
 
 @socket.on('senior_leave')
-def senior_leave(pid: int, game_id):
+def senior_leave(game_id):
     emit('game_canceled', room=game_id)
+    close_room(game_id)
 
 
 def on_start(room: int, game: Game):
@@ -168,6 +169,7 @@ def build_request(pid: int, is_auto: bool):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
     ps.build_fabric(is_auto)
     if db_connector.get_game_pid(pid).update_progress():
+        define_bankrupts(pid)
         emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
@@ -175,10 +177,23 @@ def build_request(pid: int, is_auto: bool):
 def next_turn(pid: int):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
     ps.pay_taxes()
-    if ps.money < 0:
-        emit('game_over', pid, room=db_connector.get_game_id(pid))
+    game: Game = db_connector.get_game_pid(pid)
+    if game.update_progress():
+        socket.emit('new_market_lvl', game.get_new_market_lvl(), room=game.id)
+        socket.emit('wait_esm_order', room=game.id)
 
-# todo define bankrupts
+
+def define_bankrupts(pid: int):
+    bankrupts = db_connector.get_game_pid(pid).get_bankrupts()
+    emit('bankrupts', bankrupts, room=db_connector.get_game_id(pid))
+
+
+@socket.on('bankrupt_leave')
+def bankrupt_leave(pid: int):
+    leave_game(pid)
+
+
 # todo winner definition mechanism
+# todo пофиксить возвращаемый тип sql запросов
 if __name__ == '__main__':
     socket.run(app, host='0.0.0.0')

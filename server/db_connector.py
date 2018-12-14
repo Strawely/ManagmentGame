@@ -128,7 +128,7 @@ def inc_game_progress(game_id: int):
 
 def join_player(pid, game_id: int):
     game = Game(sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', params=(game_id,)))
-    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=(game_id,))
+    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=(game_id,))[0] - 1
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         params=(pid, game.s_esm, game.s_egp, game.s_fabrics1, game.s_fabrics2, game.id, game.s_money, rang))
     return rang == game.max_players
@@ -190,3 +190,11 @@ def get_game_pid(pid: int) -> Game:
 
 def del_player_state(pid: int):
     sql('DELETE FROM player_states WHERE player_id = ?', params=(pid,))
+
+
+def zero_progress(game_id: int):
+    sql('UPDATE games SET progress = 0 WHERE id = ?', params=(game_id,))
+
+
+def new_market_lvl(game_id: int, new_lvl: int):
+    sql('UPDATE games SET market_lvl = ? WHERE id = ?', params=(new_lvl, game_id))
