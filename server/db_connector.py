@@ -111,7 +111,7 @@ def get_game_id(player_id: int) -> int:
         f"SELECT state.game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
         f"WHERE state.player_id = ? AND games.isOpened = ? "
-        f"LIMIT 1", params=(player_id, 1))[0]
+        f"LIMIT 1", params=(player_id, 1))
 
 
 def get_game(game_id: int) -> Game:
