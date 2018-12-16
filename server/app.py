@@ -60,12 +60,15 @@ def get_games_list():
 def create_game(pid, sesid, esm, egp, money, fabrics_1, fabrics_2, max_players):
     game.create_game(pid, esm, egp, money, fabrics_1, fabrics_2, max_players)
     join_room(db_connector.get_game_id(pid), sid=sesid)
+    db_connector.inc_game_progress(db_connector.get_game_id(pid))
+    # game.player_join(pid, db_connector.get_game_id(pid))
 
 
 @socket.on("join_game")
 def join_game(game_id, sesid, pid):
     join_room(game_id, sesid)
     if game.player_join(pid, game_id):
+        db_connector.zero_progress(game_id)
         on_start(game_id, db_connector.get_game(game_id))
 
 
@@ -82,6 +85,7 @@ def senior_leave(game_id):
 
 
 def on_start(room: int, game: Game):
+    db_connector.close_game(game.id)
     emit("game_start", game.market_lvl, room=room)
     emit("wait_esm_order", room=room)
 

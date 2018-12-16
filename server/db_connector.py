@@ -106,12 +106,17 @@ def add_game(pid, title, esm, egp, money, fabrics_1, fabrics_2, max_players):
         params=(pid, esm, egp, fabrics_1, fabrics_2, game_id[0][0], money))
 
 
+def close_game(game_id: int):
+    sql('UPDATE games SET isOpened = 0 WHERE id = ?', params=(game_id,))
+
+
 def get_game_id(player_id: int) -> int:
-    return sql(
-        f"SELECT state.game_id FROM games "
+    query =  sql(
+        f"SELECT game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
         f"WHERE state.player_id = ? AND games.isOpened = ? "
-        f"LIMIT 1", params=(player_id, 1))
+        f"LIMIT 1", True, params=(player_id, 1))
+    return query[0][0]
 
 
 def get_game(game_id: int) -> Game:
@@ -127,8 +132,9 @@ def inc_game_progress(game_id: int):
 
 
 def join_player(pid, game_id: int):
-    game = Game(sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', params=(game_id,)))
-    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', params=(game_id,))[0] - 1
+    query = sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', True, params=(game_id,))
+    game = Game(query[0])
+    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', True, params=(game_id,))[0][0] - 1
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         params=(pid, game.s_esm, game.s_egp, game.s_fabrics1, game.s_fabrics2, game.id, game.s_money, rang))
     return rang == game.max_players
@@ -185,7 +191,8 @@ def inc_game_turn(game_id: int):
 
 
 def get_game_pid(pid: int) -> Game:
-    return get_game(get_game_id(pid))
+    gid = get_game_id(pid)
+    return get_game(gid)
 
 
 def del_player_state(pid: int):

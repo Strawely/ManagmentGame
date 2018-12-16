@@ -7,7 +7,8 @@ def create_game(player_id, esm, egp, money, fabrics_1, fabrics_2, max_players, t
     db_connector.add_game(player_id, title, esm, egp, money, fabrics_1, fabrics_2, max_players)
 
 
-def player_join(player_id, game_id):
+def player_join(player_id, game_id: int):
+    db_connector.inc_game_progress(game_id)
     return db_connector.join_player(player_id, game_id)
 
 
