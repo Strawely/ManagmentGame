@@ -76,7 +76,7 @@ def get_player(nickname: str):
 
 
 def get_player_state_pid(pid: int) -> PlayerState:
-    query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, (pid,))
+    query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, (pid,))[0]
     return PlayerState(query_res[0], query_res[1], query_res[2], query_res[3], query_res[4],
                        query_res[5], query_res[6], query_res[7])
 
@@ -111,7 +111,7 @@ def close_game(game_id: int):
 
 
 def get_game_id(player_id: int) -> int:
-    query =  sql(
+    query = sql(
         f"SELECT game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
         f"WHERE state.player_id = ? AND games.isOpened = ? "
@@ -121,6 +121,28 @@ def get_game_id(player_id: int) -> int:
 
 def get_game(game_id: int) -> Game:
     return Game(sql(f'SELECT * FROM games WHERE id = ?', True, (game_id,))[0])
+
+
+def set_game(game: Game):
+    sql('UPDATE games SET turn_num = ?, turn_stage = ?, market_lvl = ?, isOpened = ?, name = ?, s_esm = ?, '
+        's_egp = ?, s_money = ?, s_fabrics_1 = ?, s_fabrics_2 = ?, max_players = ?, progress = ? WHERE id = ?',
+        params=(game.turn_num,
+                game.turn_stage,
+                game.market_lvl,
+                game.isOpened,
+                game.name,
+                game.s_esm,
+                game.s_egp,
+                game.s_money,
+                game.s_fabrics1,
+                game.s_fabrics2,
+                game.max_players,
+                game.progress,
+                game.id))
+
+
+def del_game(game_id):
+    sql('DELETE FROM games WHERE id = ?', params=(game_id,))
 
 
 def get_games_list() -> list:

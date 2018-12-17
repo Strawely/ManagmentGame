@@ -57,8 +57,8 @@ def get_games_list():
 
 
 @socket.on("create_game")
-def create_game(pid, sesid, esm, egp, money, fabrics_1, fabrics_2, max_players):
-    game.create_game(pid, esm, egp, money, fabrics_1, fabrics_2, max_players)
+def create_game(pid, sesid, name, esm, egp, money, fabrics_1, fabrics_2, max_players):
+    game.create_game(pid, esm, egp, money, fabrics_1, fabrics_2, max_players, name)
     join_room(db_connector.get_game_id(pid), sid=sesid)
     db_connector.inc_game_progress(db_connector.get_game_id(pid))
     # game.player_join(pid, db_connector.get_game_id(pid))
@@ -74,12 +74,17 @@ def join_game(game_id, sesid, pid):
 
 @socket.on('leave_game')
 def leave_game(pid: int, sid: int):
-    leave_room(db_connector.get_game_id(pid), sid)
-    db_connector.del_player_state(pid)
+    game_instance: Game = db_connector.get_game_pid(pid)
+    is_senior: bool = db_connector.get_player_state_pid(pid).rang == game_instance.turn_num % game_instance.max_players
+    if is_senior:
+        senior_leave(game_instance.id)
+    leave_room(game_instance.id, sid)
+    game_instance.player_leave(pid)
 
 
 @socket.on('senior_leave')
 def senior_leave(game_id):
+    db_connector.get_game(game_id).close()
     emit('game_canceled', room=game_id)
     close_room(game_id)
 

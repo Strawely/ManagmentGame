@@ -202,3 +202,11 @@ class Game:
 
     def sort_results(self, score_list: list) -> list:
         score_list.sort(key=self.compare_scores, reverse=True)
+
+    def player_leave(self, player_id: int):
+        db_connector.del_player_state(player_id)
+        self.progress -= 1
+        db_connector.set_game(self)
+
+    def close(self):
+        db_connector.del_game(self.id)
