@@ -156,10 +156,10 @@ def inc_game_progress(game_id: int):
 def join_player(pid, game_id: int):
     query = sql(f'SELECT * FROM games WHERE id == ? LIMIT 1', True, params=(game_id,))
     game = Game(query[0])
-    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', True, params=(game_id,))[0][0] - 1
+    rang = sql('SELECT count(player_id) FROM player_states WHERE game_id == ?', True, params=(game_id,))[0][0]
     sql('INSERT INTO player_states VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         params=(pid, game.s_esm, game.s_egp, game.s_fabrics1, game.s_fabrics2, game.id, game.s_money, rang))
-    return rang == game.max_players
+    return (rang + 1) == game.max_players
 
 
 def esm_result(approved_orders: list):
