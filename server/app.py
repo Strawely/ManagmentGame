@@ -196,10 +196,13 @@ def define_bankrupts(pid: int):
     bankrupts = db_connector.get_game_pid(pid).get_bankrupts()
     emit('bankrupts', bankrupts, room=db_connector.get_game_id(pid))
 
+
 @socket.on('get_player_state')
-def get_player_state(pid:int):
-     ps: PlayerState = db_connector.get_player_state_pid(pid)
-	 return[ps.player_id,ps.esm,ps.egp,ps.fabrics_1,ps.fabrics_2,ps.game_id,ps.money,ps.rang]
+def get_player_state(pid: int):
+    ps: PlayerState = db_connector.get_player_state_pid(pid)
+    return [ps.player_id, ps.esm, ps.egp, ps.fabrics_1, ps.fabrics_2, ps.game_id, ps.money, ps.rang]
+
+
 @socket.on('bankrupt_leave')
 def bankrupt_leave(pid: int, sid):
     leave_room(db_connector.get_game_id(pid), sid)
