@@ -1,6 +1,7 @@
 import db_connector
 from order import Order
 import random
+from player_state import PlayerState
 
 
 def create_game(player_id, esm, egp, money, fabrics_1, fabrics_2, max_players, title=''):
@@ -59,8 +60,11 @@ class Game:
         game_orders: list = self.esm_orders.copy()
         # game_orders.sort(key=lambda obj: obj[2])
         game_orders.sort(key=self.sort_esm, reverse=True)
-        tmp_index: int
+        tmp_index: int = 0
         for order in game_orders:
+            ps: PlayerState = db_connector.get_player_state_pid(order.player_id)
+            if ps.money < order.quantity * order.price:
+                order.quantity = 0
             if order.is_senior:
                 tmp_index = game_orders.index(order)
                 break
@@ -90,9 +94,7 @@ class Game:
         return game_orders
 
     def start_esm_auction(self, orders: list) -> list:
-        for order in orders:
-            if order.game_id == self.id:
-                self.esm_orders.append(order)
+        self.esm_orders = orders
         orders = self.sort_esm_orders()
         count = self.esm_auction(orders)
         result = []
@@ -118,9 +120,9 @@ class Game:
     def esm_auction(self, orders: list) -> int:
         esm_left = self.market[self.market_lvl - 1][1] * self.max_players
         for index, order in enumerate(orders):
-            if esm_left - order[3] >= 0:
+            if esm_left - order.quantity >= 0:
                 # emit('accepted', order[1], room=order[0])
-                esm_left -= order[3]
+                esm_left -= order.quantity
             else:
                 return index - 1
         return len(orders) - 1
@@ -128,9 +130,9 @@ class Game:
     def egp_auction(self, orders: list) -> int:
         esm_left = self.market[self.market_lvl - 1][1] * self.max_players
         for index, order in enumerate(orders):
-            if esm_left - order[3] >= 0:
+            if esm_left - order.quantity >= 0:
                 # emit('accepted', order[1], room=order[0])
-                esm_left -= order[3]
+                esm_left -= order.quantity
             else:
                 return index - 1
         return len(orders) - 1
@@ -139,7 +141,7 @@ class Game:
     def update_progress(self) -> bool:
         db_connector.inc_game_progress(self.id)
         self.progress += 1
-        if self.progress != self.max_players - 1:
+        if self.progress != self.max_players:
             return False
         db_connector.zero_progress(self.id)
         self.progress = 0
