@@ -7,6 +7,7 @@ from game import Game
 from order import Order
 from player import Player
 from player_state import PlayerState
+import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -61,6 +62,7 @@ def create_game(pid, sesid, name, esm, egp, money, fabrics_1, fabrics_2, max_pla
     game.create_game(pid, esm, egp, money, fabrics_1, fabrics_2, max_players, name)
     join_room(db_connector.get_game_id(pid), sid=sesid)
     db_connector.inc_game_progress(db_connector.get_game_id(pid))
+    return db_connector.get_game_pid(pid).get_json()
     # game.player_join(pid, db_connector.get_game_id(pid))
 
 
@@ -92,6 +94,9 @@ def senior_leave(game_id):
 def on_start(room: int, game: Game):
     db_connector.close_game(game.id)
     emit("game_start", game.market_lvl, room=room)
+
+
+def wait_esm(room: int):
     emit("wait_esm_order", room=room)
 
 
@@ -101,15 +106,19 @@ def esm_order(pid: int, price: int, qty: int):
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
     esm_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
-        send_esm_approved(game.start_esm_auction(esm_orders), game.id)
+        game_orders: list = []
+        for order in esm_orders:
+            if order.game_id == game.id:
+                game_orders.append(order)
+                esm_orders.remove(order)
+        send_esm_approved(game.start_esm_auction(game_orders), game.id)
 
 
 def send_esm_approved(orders_approved: list, room: int):
-    for order in esm_orders:
-        for order_app in orders_approved:
-            if order.__eq__(order_app):
-                esm_orders.remove(order)
-    emit("esm_orders_approved", orders_approved, room=room)
+    orders_json: list = []
+    for order in orders_approved:
+        orders_json.append(order.get_json())
+    emit("esm_orders_approved", orders_json, room=room)
     emit("wait_build_requests", room=room)
 
 
@@ -196,10 +205,13 @@ def define_bankrupts(pid: int):
     bankrupts = db_connector.get_game_pid(pid).get_bankrupts()
     emit('bankrupts', bankrupts, room=db_connector.get_game_id(pid))
 
+
 @socket.on('get_player_state')
-def get_player_state(pid:int):
-     ps: PlayerState = db_connector.get_player_state_pid(pid)
-	 return[ps.player_id,ps.esm,ps.egp,ps.fabrics_1,ps.fabrics_2,ps.game_id,ps.money,ps.rang]
+def get_player_state(pid: int):
+    ps: PlayerState = db_connector.get_player_state_pid(pid)
+    return [ps.player_id, ps.esm, ps.egp, ps.fabrics_1, ps.fabrics_2, ps.game_id, ps.money, ps.rang]
+
+
 @socket.on('bankrupt_leave')
 def bankrupt_leave(pid: int, sid):
     leave_room(db_connector.get_game_id(pid), sid)

@@ -114,8 +114,8 @@ def get_game_id(player_id: int) -> int:
     query = sql(
         f"SELECT game_id FROM games "
         f"JOIN player_states state ON games.id = state.game_id "
-        f"WHERE state.player_id = ? AND games.isOpened = ? "
-        f"LIMIT 1", True, params=(player_id, 1))
+        f"WHERE state.player_id = ?"
+        f"LIMIT 1", True, params=(player_id,))
     return query[0][0]
 
 

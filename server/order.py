@@ -16,3 +16,6 @@ class Order:
         other: Order = o
         return self.game_id == other.game_id and self.player_id == other.player_id \
             and self.is_senior == other.is_senior and self.price == other.price and self.quantity == other.quantity
+
+    def get_json(self):
+        return [self.game_id, self.player_id, self.price, self.quantity, self.is_senior]
