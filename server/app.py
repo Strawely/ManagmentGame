@@ -195,8 +195,8 @@ def take_credit(pid: int, amount: int):
         ps: PlayerState = db_connector.get_player_state_pid(pid)
         ps.take_credit(amount)
     if db_connector.get_game_pid(pid).update_progress():
-        # emit('wait_build_request')
-        emit('wait_next_turn', room=db_connector.get_game_id(pid))
+         emit('wait_build_request')
+        #emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
 @socket.on('build_request')
