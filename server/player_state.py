@@ -31,19 +31,22 @@ class PlayerState:
         produced_egp: int = fabrics_2 * 2
         cost: int = fabrics_2 * 3000
         if produced_egp > quantity:
-            return 0, 0
+            return 0
         if quantity > produced_egp:
             produced_egp += fabrics_1
             cost += fabrics_1 * 2000
             if produced_egp > quantity:
-                return 0, 0
-
+                produced_egp = quantity
+        if cost > self.money:
+            return 0
         if quantity == produced_egp:
+            self.esm -= produced_egp
             self.egp += produced_egp
             self.money -= cost
-        self.egp += produced_egp
-        self.esm -= produced_egp
-        self.money -= cost
+        # self.egp += produced_egp
+        # self.esm -= produced_egp
+        # self.money -= cost
+        db_connector.update_player_state(self)
         return produced_egp, cost
 
     def take_credit(self, amount: int):

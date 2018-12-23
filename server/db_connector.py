@@ -178,11 +178,6 @@ def egp_result(approved_orders: list):
         sql('UPDATE player_states SET egp = ?, money = ? WHERE player_id = ?', params=(ps.egp, ps.money, ps.player_id))
 
 
-def egp_produce(ps: PlayerState):
-    sql('UPDATE player_states SET egp = ?, esm = ?, money = ? WHERE player_id = ?',
-        params=(ps.egp, ps.esm, ps.money, ps.player_id))
-
-
 def get_credits(pid: int):
     return sql('SELECT * FROM credits WHERE player_id = ?', True, (pid,))
 
@@ -229,5 +224,14 @@ def zero_progress(game_id: int):
     sql('UPDATE games SET progress = 0 WHERE id = ?', params=(game_id,))
 
 
+def dec_game_progress(game_id: int):
+    sql('UPDATE games SET progress = progress - 1 WHERE id = ?', params=(game_id,))
+
+
 def new_market_lvl(game_id: int, new_lvl: int):
     sql('UPDATE games SET market_lvl = ? WHERE id = ?', params=(new_lvl, game_id))
+
+
+def update_player_state(ps: PlayerState):
+    sql('UPDATE player_states SET player_id = ?, esm = ?, egp = ?, fabrics_1 = ?, fabrics_2 = ?, game_id = ?, money = ?, rang = ? WHERE player_id = ?',
+        params=(ps.player_id, ps.esm, ps.egp, ps.fabrics_1, ps.fabrics_2, ps.game_id, ps.money, ps.rang, ps.player_id))

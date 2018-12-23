@@ -30,6 +30,7 @@ class Game:
     progress: int = 0
 
     esm_orders = []
+    egp_orders = []
     market = ((1, 1.0, 800, 3.0, 6500),
               (2, 1.5, 650, 2.5, 6000),
               (3, 2.0, 500, 2.0, 5500),
@@ -50,20 +51,22 @@ class Game:
         self.s_fabrics2 = query[10]
         self.max_players = query[11]
         self.progress = query[12]
-        self.market = ((1, 1.0 * self.max_players, 800, 3.0 * self.max_players, 6500),
-                       (2, 1.5 * self.max_players, 650, 2.5 * self.max_players, 6000),
-                       (3, 2.0 * self.max_players, 500, 2.0 * self.max_players, 5500),
-                       (4, 2.5 * self.max_players, 400, 1.5 * self.max_players, 5000),
-                       (5, 3.0 * self.max_players, 300, 1.0 * self.max_players, 4500))
+        self.market = ((1, 1 * self.max_players, 800, 5 * self.max_players, 6500),
+                       (2, 2 * self.max_players, 650, 4 * self.max_players, 6000),
+                       (3, 3 * self.max_players, 500, 3 * self.max_players, 5500),
+                       (4, 4 * self.max_players, 400, 2 * self.max_players, 5000),
+                       (5, 5 * self.max_players, 300, 1 * self.max_players, 4500))
 
     def sort_esm_orders(self) -> list:
         game_orders: list = self.esm_orders.copy()
         # game_orders.sort(key=lambda obj: obj[2])
-        game_orders.sort(key=self.sort_esm, reverse=True)
+        game_orders.sort(key=self.sort_esm)
         tmp_index: int = 0
         for order in game_orders:
             ps: PlayerState = db_connector.get_player_state_pid(order.player_id)
             if ps.money < order.quantity * order.price:
+                order.quantity = 0
+            if order.price < self.market[self.market_lvl-1][2]:
                 order.quantity = 0
             if order.is_senior:
                 tmp_index = game_orders.index(order)
@@ -79,10 +82,9 @@ class Game:
 
     # можно зарефакторить через передачу лямбды
     def sort_egp_orders(self) -> list:
-        game_orders: list = self.esm_orders.copy()
-        # game_orders.sort(key=lambda obj: obj[2])
-        game_orders.sort(key=self.sort_esm)
-        tmp_index: int
+        game_orders: list = self.egp_orders.copy()
+        game_orders.sort(key=self.sort_esm, reverse=True)
+        tmp_index: int = 0
         for order in game_orders:
             if order.is_senior:
                 tmp_index = game_orders.index(order)
@@ -95,47 +97,50 @@ class Game:
 
     def start_esm_auction(self, orders: list) -> list:
         self.esm_orders = orders
-        orders = self.sort_esm_orders()
-        count = self.esm_auction(orders)
+        orders1 = self.sort_esm_orders()
+        count = self.esm_auction(orders1)
         result = []
-        while count >= 0:
-            result.append(orders.pop(0))
+        while count > 0:
+            result.append(orders1.pop(0))
             count -= 1
+        for res in result:
+            if res.quantity == 0:
+                result.remove(res)
         db_connector.esm_result(result)
         return result
 
     def start_egp_auction(self, orders: list) -> list:
-        for order in orders:
-            if order.game_id == self.id:
-                self.esm_orders.append(order)
-        orders = self.sort_egp_orders()
-        count = self.egp_auction(orders)
+        self.egp_orders = orders
+        orders1 = self.sort_egp_orders()
+        count = self.egp_auction(orders1)
         result = []
-        while count >= 0:
-            result.append(orders.pop(0))
+        while count > 0:
+            result.append(orders1.pop(0))
             count -= 1
+        for res in result:
+            if res.quantity == 0:
+                result.remove(res)
+        db_connector.egp_result(result)
         return result
 
     # возвращает кол-во удовлетворенных заявок
     def esm_auction(self, orders: list) -> int:
-        esm_left = self.market[self.market_lvl - 1][1] * self.max_players
+        esm_left = self.market[self.market_lvl - 1][1]
         for index, order in enumerate(orders):
             if esm_left - order.quantity >= 0:
-                # emit('accepted', order[1], room=order[0])
                 esm_left -= order.quantity
             else:
-                return index - 1
-        return len(orders) - 1
+                return index
+        return len(orders)
 
     def egp_auction(self, orders: list) -> int:
-        esm_left = self.market[self.market_lvl - 1][1] * self.max_players
+        esm_left = self.market[self.market_lvl - 1][1]
         for index, order in enumerate(orders):
             if esm_left - order.quantity >= 0:
-                # emit('accepted', order[1], room=order[0])
                 esm_left -= order.quantity
             else:
-                return index - 1
-        return len(orders) - 1
+                return index
+        return len(orders)
 
     # инкрементируем количество игроков, сделавших ход и проверям, равно ли максимальному
     def update_progress(self) -> bool:
@@ -154,7 +159,7 @@ class Game:
         result: list = []
         for state in ps:
             sum = db_connector.get_credits(state.player_id)[2]
-            result.append(int(sum / 100))
+            result.append((state.player_id, int(sum / 100)))
             db_connector.set_money(state.player_id, state.money - int(sum / 100))
         return result
 
