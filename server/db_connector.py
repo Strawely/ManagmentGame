@@ -191,7 +191,7 @@ def credit_payoff(credit_id: int):
 
 
 def get_player_pid(pid: int) -> Player:
-    query = sql('SELECT * FROM players WHERE id = ?', True, (pid,))
+    query = sql('SELECT * FROM players WHERE id = ?', True, (pid,))[0]
     return Player(query[0], query[1], query[2])
 
 

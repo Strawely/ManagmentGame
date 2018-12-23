@@ -175,26 +175,28 @@ def send_egp_approved(orders_approved: list, room: int):
 
 
 def pay_bank_percent(game: Game, room: int):
-    emit('paid_percents', game.pay_bank_percent(), room=room)  # в зависимости от значения rang можно для каждого
-    #  игрока получить выплаченные проценты
+    emit('paid_percents', game.pay_bank_percent(), room=room)
     emit('wait_credit_payoff', room=room)
 
 
 @socket.on('credit_payoff')
 def credit_payoff(pid: int):
+    print(str(pid))
     player: Player = db_connector.get_player_pid(pid)
     emit('paid_credit_sum', player.check_credit_payoff())
     game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
-        emit('wait_take_credit')
+        emit('wait_take_credit', room=db_connector.get_game_id(pid))
 
 
 @socket.on('take_credit')
 def take_credit(pid: int, amount: int):
-    ps: PlayerState = db_connector.get_player_state_pid(pid)
-    ps.take_credit(amount)
+    if amount > 0:
+        ps: PlayerState = db_connector.get_player_state_pid(pid)
+        ps.take_credit(amount)
     if db_connector.get_game_pid(pid).update_progress():
-        emit('wait_build_request')
+        # emit('wait_build_request')
+        emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
 @socket.on('build_request')
@@ -213,7 +215,7 @@ def next_turn(pid: int):
     game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
         socket.emit('new_market_lvl', game.get_new_market_lvl(), room=game.id)
-        socket.emit('wait_esm_order', room=game.id)
+        # socket.emit('wait_esm_order', room=game.id)
 
 
 def define_bankrupts(pid: int):

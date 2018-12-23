@@ -60,7 +60,7 @@ class Game:
     def sort_esm_orders(self) -> list:
         game_orders: list = self.esm_orders.copy()
         # game_orders.sort(key=lambda obj: obj[2])
-        game_orders.sort(key=self.sort_esm)
+        game_orders.sort(key=self.sort_esm, reverse=True)
         tmp_index: int = 0
         for order in game_orders:
             ps: PlayerState = db_connector.get_player_state_pid(order.player_id)
@@ -83,7 +83,7 @@ class Game:
     # можно зарефакторить через передачу лямбды
     def sort_egp_orders(self) -> list:
         game_orders: list = self.egp_orders.copy()
-        game_orders.sort(key=self.sort_esm, reverse=True)
+        game_orders.sort(key=self.sort_esm, reverse=False)
         tmp_index: int = 0
         for order in game_orders:
             if order.is_senior:
@@ -158,7 +158,9 @@ class Game:
         ps: list = db_connector.get_player_state_gid(self.id)
         result: list = []
         for state in ps:
-            sum = db_connector.get_credits(state.player_id)[2]
+            sum: int = 0
+            for credit in db_connector.get_credits(state.player_id):
+                sum += credit[2]
             result.append((state.player_id, int(sum / 100)))
             db_connector.set_money(state.player_id, state.money - int(sum / 100))
         return result
@@ -190,8 +192,8 @@ class Game:
             new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 12, 1 / 12, 1 / 4, 1 / 3, 1 / 4])
         elif self.market_lvl == 5:
             new_lvl = random.choices([1, 2, 3, 4, 5], weights=[1 / 12, 1 / 12, 1 / 6, 1 / 3, 1 / 3])
-        db_connector.new_market_lvl(self.id, new_lvl)
-        return new_lvl
+        db_connector.new_market_lvl(self.id, new_lvl[0])
+        return new_lvl[0]
 
     def get_score_list(self):
         result: list = []
