@@ -107,10 +107,16 @@ def esm_order(pid: int, price: int, qty: int):
     esm_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
         game_orders: list = []
-        for order in esm_orders:
+        i: int = 0
+        while i < len(esm_orders):
+            order: Order = esm_orders[i]
             if order.game_id == game.id:
+                print('game_id ' + str(order.game_id) + ' ' + str(game.id))
                 game_orders.append(order)
                 esm_orders.remove(order)
+            else:
+                i += 1
+
         send_esm_approved(game.start_esm_auction(game_orders), game.id)
 
 
@@ -119,7 +125,7 @@ def send_esm_approved(orders_approved: list, room: int):
     for order in orders_approved:
         orders_json.append(order.get_json())
     emit("esm_orders_approved", orders_json, room=room)
-    emit("wait_build_requests", room=room)
+    emit("wait_production", room=room)
 
 
 @socket.on('disconnect')
@@ -131,13 +137,13 @@ def test_disconnect():
 def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
     player_state = db_connector.get_player_state_pid(pid)
     result = player_state.get_egp(quantity, fabrics_1, fabrics_2)
-    if result[0] == 0:
+    if isinstance(result, int) and result == 0:
         emit('production_error')
         return
     emit('produced', (result[0], result[1]))
     game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
-        emit('wait_egp_request')
+        emit('wait_egp_request', room=game.id)
 
 
 # метод обработки заявки на ЕГП, тут же произвдится выплата банковского процента
@@ -147,39 +153,50 @@ def egp_request(pid: int, price: int, qty: int):
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
     egp_orders.append(Order(game.id, pid, price, qty, is_senior))
     if game.update_progress():
-        send_egp_approved(game.start_egp_auction(egp_orders), game.id)
-        pay_bank_percent(game, db_connector.get_game_id(pid))
+        game_orders: list = []
+        i: int = 0
+        while i < len(egp_orders):
+            order: Order = egp_orders[i]
+            if order.game_id == game.id:
+                print('game_id ' + str(order.game_id) + ' ' + str(game.id))
+                game_orders.append(order)
+                egp_orders.remove(order)
+            else:
+                i += 1
+        send_egp_approved(game.start_egp_auction(game_orders), game.id)
+        pay_bank_percent(game, game.id)
 
 
 def send_egp_approved(orders_approved: list, room: int):
-    for order in esm_orders:
-        for order_app in orders_approved:
-            if order.__eq__(order_app):
-                esm_orders.remove(order)
-    emit("egp_orders_approved", orders_approved, room=room)
+    orders_json: list = []
+    for order in orders_approved:
+        orders_json.append(order.get_json())
+    emit("egp_orders_approved", orders_json, room=room)
 
 
 def pay_bank_percent(game: Game, room: int):
-    emit('paid_percents', game.pay_bank_percent(), room=room)  # в зависимости от значения rang можно для каждого
-    #  игрока получить выплаченные проценты
+    emit('paid_percents', game.pay_bank_percent(), room=room)
     emit('wait_credit_payoff', room=room)
 
 
 @socket.on('credit_payoff')
 def credit_payoff(pid: int):
+    print(str(pid))
     player: Player = db_connector.get_player_pid(pid)
     emit('paid_credit_sum', player.check_credit_payoff())
     game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
-        emit('wait_take_credit')
+        emit('wait_take_credit', room=db_connector.get_game_id(pid))
 
 
 @socket.on('take_credit')
 def take_credit(pid: int, amount: int):
-    ps: PlayerState = db_connector.get_player_state_pid(pid)
-    ps.take_credit(amount)
+    if amount > 0:
+        ps: PlayerState = db_connector.get_player_state_pid(pid)
+        ps.take_credit(amount)
     if db_connector.get_game_pid(pid).update_progress():
-        emit('wait_build_request')
+        # emit('wait_build_request')
+        emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
 @socket.on('build_request')
@@ -198,7 +215,7 @@ def next_turn(pid: int):
     game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
         socket.emit('new_market_lvl', game.get_new_market_lvl(), room=game.id)
-        socket.emit('wait_esm_order', room=game.id)
+        # socket.emit('wait_esm_order', room=game.id)
 
 
 def define_bankrupts(pid: int):
