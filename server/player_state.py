@@ -55,7 +55,11 @@ class PlayerState:
                                  db_connector.get_game_pid(self.player_id).turn_num)
 
     def build_fabric(self, is_auto: bool):
-        db_connector.set_money(self.player_id, self.money - 10000 if is_auto else 5000)
+        if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num+1)[0]:
+            if self.money > 5000 if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num+1)[0] else 2500:
+                db_connector.set_money(self.player_id, self.money - 5000 if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num+1)[0] else 2500)
+        if self.money>5000 if is_auto else 2500:
+            db_connector.set_money(self.player_id, self.money - 5000 if is_auto else 2500)
         month = db_connector.get_game_pid(self.player_id).turn_num + 7 if is_auto else 5
         db_connector.build_fabric(self.player_id, is_auto, month)
 

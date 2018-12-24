@@ -202,6 +202,12 @@ def take_credit(pid: int, amount: int, month: int):
 def build_fabric(pid: int, is_auto: bool, month: int):
     sql('INSERT INTO construction VALUES (NULL, ?, ?, ?)', params=(pid, is_auto, month))
 
+def check_month(pid:int,month:int):
+    query=sql('SELECT start_month FROM construction WHERE player_id=?',True,pid)
+    if month in query:
+        query = sql('SELECT isAutomated FROM construction WHERE player_id=? AND start_month=?',True,params=(pid,month))
+        return {True,query}
+    else:return {False}
 
 def inc_game_turn(game_id: int):
     sql('UPDATE games SET turn_num = turn_num + 1 WHERE id = ?', params=(game_id,))
