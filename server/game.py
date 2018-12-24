@@ -29,6 +29,8 @@ class Game:
     max_players: int = 0
     progress: int = 0
 
+
+
     esm_orders = []
     egp_orders = []
     market = ((1, 1.0, 800, 3.0, 6500),

@@ -11,7 +11,7 @@ import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode="gevent")
+socket = SocketIO(app, async_mode="gevent")
 db_connector.create_db()
 
 esm_orders: list = []
@@ -23,7 +23,7 @@ def index():
     return 'Hello world'
 
 
-@socketio.on("connect")
+@socket.on("connect")
 def con():
     print('Connected')
     emit('success')
@@ -34,7 +34,7 @@ def encode_player(player: Player):
 
 
 # 0 - удалось добавить, 1 - уже существует, -1 - ошибка
-@socketio.on("register_player")
+@socket.on("register_player")
 def add_player(nick: str, avatar: int):
     try:
         if db_connector.get_player(nick) is None:
@@ -52,29 +52,29 @@ def add_player(nick: str, avatar: int):
 #     emit("get_player_resp", res)
 
 
-@socketio.on('get_games_list')
+@socket.on('get_games_list')
 def get_games_list():
     return db_connector.get_games_list()
 
 
-@socketio.on("create_game")
+@socket.on("create_game")
 def create_game(pid, sesid, name, esm, egp, money, fabrics_1, fabrics_2, max_players):
     game.create_game(pid, esm, egp, money, fabrics_1, fabrics_2, max_players, name)
-    join_room(db_connector.get_game_id(pid))
+    join_room(db_connector.get_game_id(pid), sid=sesid)
     db_connector.inc_game_progress(db_connector.get_game_id(pid))
     return db_connector.get_game_pid(pid).get_json()
     # game.player_join(pid, db_connector.get_game_id(pid))
 
 
-@socketio.on("join_game")
+@socket.on("join_game")
 def join_game(game_id, sesid, pid):
-    join_room(game_id)
+    join_room(game_id, sesid)
     if game.player_join(pid, game_id):
         db_connector.zero_progress(game_id)
         on_start(game_id, db_connector.get_game(game_id))
 
 
-@socketio.on('leave_game')
+@socket.on('leave_game')
 def leave_game(pid: int, sid: int):
     game_instance: Game = db_connector.get_game_pid(pid)
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game_instance.turn_num % game_instance.max_players
@@ -84,7 +84,7 @@ def leave_game(pid: int, sid: int):
     game_instance.player_leave(pid)
 
 
-@socketio.on('senior_leave')
+@socket.on('senior_leave')
 def senior_leave(game_id):
     db_connector.get_game(game_id).close()
     emit('game_canceled', room=game_id)
@@ -100,7 +100,7 @@ def wait_esm(room: int):
     emit("wait_esm_order", room=room)
 
 
-@socketio.on('esm_order')
+@socket.on('esm_order')
 def esm_order(pid: int, price: int, qty: int):
     game: Game = db_connector.get_game_pid(pid)
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
@@ -128,12 +128,12 @@ def send_esm_approved(orders_approved: list, room: int):
     emit("wait_production", room=room)
 
 
-@socketio.on('disconnect')
+@socket.on('disconnect')
 def test_disconnect():
     print('Client disconnected')
 
 
-@socketio.on('produce')
+@socket.on('produce')
 def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
     player_state = db_connector.get_player_state_pid(pid)
     result = player_state.get_egp(quantity, fabrics_1, fabrics_2)
@@ -147,7 +147,7 @@ def produce(pid: int, quantity: int, fabrics_1: int, fabrics_2: int):
 
 
 # метод обработки заявки на ЕГП, тут же произвдится выплата банковского процента
-@socketio.on('egp_request')
+@socket.on('egp_request')
 def egp_request(pid: int, price: int, qty: int):
     game: Game = db_connector.get_game_pid(pid)
     is_senior: bool = db_connector.get_player_state_pid(pid).rang == game.turn_num % game.max_players
@@ -179,7 +179,7 @@ def pay_bank_percent(game: Game, room: int):
     emit('wait_credit_payoff', room=room)
 
 
-@socketio.on('credit_payoff')
+@socket.on('credit_payoff')
 def credit_payoff(pid: int):
     print(str(pid))
     player: Player = db_connector.get_player_pid(pid)
@@ -189,7 +189,7 @@ def credit_payoff(pid: int):
         emit('wait_take_credit', room=db_connector.get_game_id(pid))
 
 
-@socketio.on('take_credit')
+@socket.on('take_credit')
 def take_credit(pid: int, amount: int):
     if amount > 0:
         ps: PlayerState = db_connector.get_player_state_pid(pid)
@@ -200,23 +200,33 @@ def take_credit(pid: int, amount: int):
         # emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
-@socketio.on('build_request')
+@socket.on('build_request')
 def build_request(pid: int, is_auto: bool):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
     ps.build_fabric(is_auto)
     if db_connector.get_game_pid(pid).update_progress():
-        define_bankrupts(db_connector.get_game_pid(pid))
+        define_bankrupts(pid)
+        emit('wait_upgrade_request', room=(db_connector.get_game_id(pid)))
+
+@socket.on('upgrade_request')
+def upgrade_reqest(pid: int, do: bool):
+    ps: PlayerState = db_connector.get_player_state_pid(pid)
+    if(do):
+        ps.upgrade_fabric()
+    ps.take_for_upgrade()
+    if db_connector.get_game_pid(pid).update_progress():
+        define_bankrupts(pid)
         emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
-@socketio.on('next_turn')
+@socket.on('next_turn')
 def next_turn(pid: int):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
     ps.pay_taxes()
     game: Game = db_connector.get_game_pid(pid)
     if game.update_progress():
         define_bankrupts(db_connector.get_game_pid(pid))
-        socketio.emit('new_market_lvl', game.get_new_market_lvl(), room=game.id)
+        socket.emit('new_market_lvl', game.get_new_market_lvl(), room=game.id)
         # socket.emit('wait_esm_order', room=game.id)
 
 
@@ -232,19 +242,19 @@ def define_bankrupts(game: Game):
             emit('bankrupts', bankrupts_json, room=game.id)  # банкротство только одного или нескольких
 
 
-@socketio.on('get_player_state')
+@socket.on('get_player_state')
 def get_player_state(pid: int):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
     return [ps.player_id, ps.esm, ps.egp, ps.fabrics_1, ps.fabrics_2, ps.game_id, ps.money, ps.rang]
 
 
-@socketio.on('get_competitor_info')
+@socket.on('get_competitor_info')
 def get_player_state(nick: str):
     ps: PlayerState = db_connector.get_player_state_pid(db_connector.get_player(nick).id)
     return [ps.player_id, ps.esm, ps.egp, ps.fabrics_1, ps.fabrics_2, ps.game_id, ps.money, ps.rang]
 
 
-@socketio.on('get_player_info')
+@socket.on('get_player_info')
 def get_player_info(pid: int):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
     nicknames = []
@@ -253,7 +263,7 @@ def get_player_info(pid: int):
     return [ps.player_id, ps.esm, ps.egp, ps.fabrics_1, ps.fabrics_2, ps.game_id, ps.money, ps.rang, nicknames]
 
 
-@socketio.on('bankrupt_leave')
+@socket.on('bankrupt_leave')
 def bankrupt_leave(pid: int):
     db_connector.dec_max_players(db_connector.get_game_id(pid))
     if db_connector.get_game_pid(pid).max_players < 2:
@@ -271,4 +281,4 @@ def define_winner(game_id: int):
 
 # todo располовинить стоимость фабрик
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0')
+    socket.run(app, host='0.0.0.0')
