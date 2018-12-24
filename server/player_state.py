@@ -63,9 +63,12 @@ class PlayerState:
         month = db_connector.get_game_pid(self.player_id).turn_num + 7 if is_auto else 5
         db_connector.build_fabric(self.player_id, is_auto, month)
 
-    def update_fabric(self):
-
-
+    def upgrade_fabric(self):
+        db_connector.update_fabric(self.player_id,db_connector.get_game_pid(self.player_id).turn_num)
+        db_connector.set_money(self.player_id, self.money - 3500)
+    def take_for_upgrade(self):
+        if db_connector.check_stop_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num):
+            db_connector.set_money(self.player_id, self.money - 3500)
     def pay_taxes(self):
         taxes_value = self.esm * 300 + self.egp * 500 + self.fabrics_1 * 1000 + self.fabrics_2 * 1500
         db_connector.set_money(self.player_id, self.money - taxes_value)
