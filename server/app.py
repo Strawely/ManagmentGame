@@ -201,21 +201,23 @@ def take_credit(pid: int, amount: int):
 
 
 @socket.on('build_request')
-def build_request(pid: int, is_auto: bool):
-    ps: PlayerState = db_connector.get_player_state_pid(pid)
-    ps.build_fabric(is_auto)
+def build_request(pid: int, is_auto: bool, is_skip: bool):
+    if not is_skip:
+        ps: PlayerState = db_connector.get_player_state_pid(pid)
+        ps.build_fabric(is_auto)
     if db_connector.get_game_pid(pid).update_progress():
-        define_bankrupts(pid)
+        define_bankrupts(db_connector.get_game_pid(pid))
         emit('wait_upgrade_request', room=(db_connector.get_game_id(pid)))
+
 
 @socket.on('upgrade_request')
 def upgrade_reqest(pid: int, do: bool):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
-    if(do):
+    if do:
         ps.upgrade_fabric()
     ps.take_for_upgrade()
     if db_connector.get_game_pid(pid).update_progress():
-        define_bankrupts(pid)
+        define_bankrupts(db_connector.get_game_pid(pid))
         emit('wait_next_turn', room=db_connector.get_game_id(pid))
 
 
@@ -235,7 +237,7 @@ def define_bankrupts(game: Game):
     if len(bankrupts) > 0:
         bankrupts_json = []
         for bankrupt in bankrupts:
-            bankrupts.append(bankrupt.get_json())
+            bankrupts_json.append(bankrupt.player_id)
         if len(bankrupts) - game.max_players < 2:
             emit('game_over', bankrupts_json, room=game.id)  # конец игры
         else:

@@ -200,21 +200,29 @@ def take_credit(pid: int, amount: int, month: int):
 
 
 def build_fabric(pid: int, is_auto: bool, month: int):
-    sql('INSERT INTO construction VALUES (NULL, ?, ?, ?,?)', params=(pid, is_auto, month,-1))
+    sql('INSERT INTO construction VALUES (NULL, ?, ?, ?,?)', params=(pid, is_auto, month, -1))
 
-def check_month(pid:int,month:int):
-    query=sql('SELECT start_month FROM construction WHERE player_id=?',True,pid)
+
+def check_month(pid: int, month: int):
+    query = sql('SELECT start_month FROM construction WHERE player_id=?', True, (pid,))
     if month in query:
-        query = sql('SELECT isAutomated FROM construction WHERE player_id=? AND start_month=?',True,params=(pid,month))
-        return {True,query}
-    else:return {False}
-def update_fabric(pid:int,month:int):
-    query=sql('SELECT id FROM construction WHERE player_id=? AND isAutomated=? ',True,params=(pid,False))
-    sql('UPDATE construction SET stop_month=? WHERE id=?',params=(month+9,query[0]))
-    sql('UPDATE construction SET isAutomated=? WHERE stop_month=? AND player_id=?',params=(True,month-1,pid))
-def check_stop_month(pid:int,month:int):
-    query = sql('SELECT stop_month FROM construction WHERE player_id=?', True, pid)
-    return  month+1 in query
+        query = sql('SELECT isAutomated FROM construction WHERE player_id=? AND start_month=?', True, params=(pid, month))
+        return [True, query]
+    else:
+        return [False]
+
+
+def update_fabric(pid: int, month: int):
+    query = sql('SELECT id FROM construction WHERE player_id=? AND isAutomated=? ', True, params=(pid, 0))[0]
+    sql('UPDATE construction SET stop_month=? WHERE id=?', params=(month+9, query[0]))
+    sql('UPDATE construction SET isAutomated=? WHERE stop_month=? AND player_id=?', params=(1, month-1, pid))
+
+
+def check_stop_month(pid: int, month: int):
+    query = sql('SELECT stop_month FROM construction WHERE player_id=?', True, (pid,))
+    return month+1 in query
+
+
 def inc_game_turn(game_id: int):
     sql('UPDATE games SET turn_num = turn_num + 1 WHERE id = ?', params=(game_id,))
 

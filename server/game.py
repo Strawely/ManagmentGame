@@ -191,8 +191,9 @@ class Game:
         result = []
         player_states = db_connector.get_player_state_gid(self.id)
         for ps in player_states:
-            if ps.money <= 0:
-                result.append(ps.player_id)
+            pss: PlayerState = ps
+            if pss.money <= 0:
+                result.append(pss)
         if len(result) > 1:
             result = self.sorting_bankrupts(result)
         return result

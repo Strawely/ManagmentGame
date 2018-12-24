@@ -66,20 +66,22 @@ class PlayerState:
         return 0
 
     def build_fabric(self, is_auto: bool):
-        if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num+1)[0]:
-            if self.money > 5000 if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num+1)[1] else 2500:
-                db_connector.set_money(self.player_id, self.money - 5000 if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num+1)[1] else 2500)
-        if self.money>5000 if is_auto else 2500:
-            db_connector.set_money(self.player_id, self.money - 5000 if is_auto else 2500)
+        if db_connector.check_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num+1)[0]:
+            if self.money > 5000 if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num + 1)[1] else 2500:
+                db_connector.set_money(self.player_id, self.money - 5000 if db_connector.check_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num+1)[1] else 2500)
+        if self.money > 5000 if is_auto else 2500:
+            db_connector.set_money(self.player_id, self.money - (5000 if is_auto else 2500))
         month = db_connector.get_game_pid(self.player_id).turn_num + 7 if is_auto else 5
         db_connector.build_fabric(self.player_id, is_auto, month)
 
     def upgrade_fabric(self):
         db_connector.update_fabric(self.player_id,db_connector.get_game_pid(self.player_id).turn_num)
         db_connector.set_money(self.player_id, self.money - 3500)
+
     def take_for_upgrade(self):
-        if db_connector.check_stop_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num):
+        if db_connector.check_stop_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num):
             db_connector.set_money(self.player_id, self.money - 3500)
+
     def pay_taxes(self):
         taxes_value = self.esm * 150 + self.egp * 250 + self.fabrics_1 * 500 + self.fabrics_2 * 750
         db_connector.set_money(self.player_id, self.money - taxes_value)
