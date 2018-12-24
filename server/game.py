@@ -86,6 +86,11 @@ class Game:
         game_orders.sort(key=self.sort_esm, reverse=False)
         tmp_index: int = 0
         for order in game_orders:
+            ps: PlayerState = db_connector.get_player_state_pid(order.player_id)
+            if ps.egp < order.quantity:
+                order.quantity = 0
+            if order.price > self.market[self.market_lvl - 1][4]:
+                order.quantity = 0
             if order.is_senior:
                 tmp_index = game_orders.index(order)
                 break
@@ -103,9 +108,13 @@ class Game:
         while count > 0:
             result.append(orders1.pop(0))
             count -= 1
-        for res in result:
-            if res.quantity == 0:
-                result.remove(res)
+        i: int = 0
+        while i < len(result):
+            order: Order = result[i]
+            if order.quantity == 0:
+                result.remove(order)
+            else:
+                i += 1
         db_connector.esm_result(result)
         return result
 
@@ -117,9 +126,13 @@ class Game:
         while count > 0:
             result.append(orders1.pop(0))
             count -= 1
-        for res in result:
-            if res.quantity == 0:
-                result.remove(res)
+        i: int = 0
+        while i < len(result):
+            order: Order = result[i]
+            if order.quantity == 0:
+                result.remove(order)
+            else:
+                i += 1
         db_connector.egp_result(result)
         return result
 
@@ -178,7 +191,17 @@ class Game:
         for ps in player_states:
             if ps.money <= 0:
                 result.append(ps.player_id)
+        if len(result) > 1:
+            result = self.sorting_bankrupts(result)
         return result
+
+    def sort_bankrupts(self, o: object):
+        return o.money
+
+    def sorting_bankrupts(self, bankrupts: list) -> list:
+        b_sorted = bankrupts.copy()
+        b_sorted.sort(key=self.sort_bankrupts, reverse=True)
+        return b_sorted
 
     def get_new_market_lvl(self) -> int:
         new_lvl = 3
@@ -195,13 +218,13 @@ class Game:
         db_connector.new_market_lvl(self.id, new_lvl[0])
         return new_lvl[0]
 
-    def get_score_list(self):
+    def get_score_list(self) -> list:
         result: list = []
         for ps in db_connector.get_player_state_gid(self.id):
-            sum = ps.fabrics_1 * 5000 + ps.fabrics_2 * 10000 + ps.esm * self.market[self.market_lvl + 1][2] + \
-                  ps.egp * self.market[self.market_lvl + 1][4]
+            sum = ps.fabrics_1 * 5000 + ps.fabrics_2 * 10000 + ps.esm * self.market[self.market_lvl - 1][2] + \
+                  ps.egp * self.market[self.market_lvl - 1][4]
             for credit in db_connector.get_credits(ps.player_id):
-                sum += credit[2]
+                sum -= credit[2]
             sum += ps.money
             result.append([ps.player_id, sum])
         return self.sort_results(result)

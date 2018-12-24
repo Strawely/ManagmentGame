@@ -74,7 +74,6 @@ def get_player(nickname: str):
     else:
         return None
 
-
 def get_player_state_pid(pid: int) -> PlayerState:
     query_res = sql(f'SELECT * FROM player_states WHERE player_id = ?', True, (pid,))[0]
     return PlayerState(query_res[0], query_res[1], query_res[2], query_res[3], query_res[4],

@@ -49,10 +49,21 @@ class PlayerState:
         db_connector.update_player_state(self)
         return produced_egp, cost
 
-    def take_credit(self, amount: int):
+    def take_credit(self, amount: int) -> int:
         db_connector.set_money(self.player_id, self.money + amount)
-        db_connector.take_credit(self.player_id, amount,
-                                 db_connector.get_game_pid(self.player_id).turn_num)
+        max_amount: int = self.fabrics_1 * 2500 + self.fabrics_2 * 5000
+        already_taken: int = 0
+        for credit in db_connector.get_credits(self.player_id):
+            already_taken += credit[2]
+        if already_taken < max_amount:
+            max_amount -= already_taken
+            if amount > max_amount:
+                amount = max_amount
+            db_connector.get_credits(self.player_id)
+            db_connector.take_credit(self.player_id, amount,
+                                     db_connector.get_game_pid(self.player_id).turn_num)
+            return amount
+        return 0
 
     def build_fabric(self, is_auto: bool):
         db_connector.set_money(self.player_id, self.money - 10000 if is_auto else 5000)
@@ -60,5 +71,8 @@ class PlayerState:
         db_connector.build_fabric(self.player_id, is_auto, month)
 
     def pay_taxes(self):
-        taxes_value = self.esm * 300 + self.egp * 500 + self.fabrics_1 * 1000 + self.fabrics_2 * 1500
+        taxes_value = self.esm * 150 + self.egp * 250 + self.fabrics_1 * 500 + self.fabrics_2 * 750
         db_connector.set_money(self.player_id, self.money - taxes_value)
+
+    def get_json(self):
+        return [self.player_id, self.esm, self.egp, self.fabrics_1, self.fabrics_2, self.game_id, self.money, self.rang]
