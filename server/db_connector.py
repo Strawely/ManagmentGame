@@ -64,7 +64,7 @@ def create_db():
         "player_id INTEGER,"
         "isAutomated BOOLEAN,"
         "start_month INTEGER,"
-        "stop_month INTEGER,"
+        "init_month INTEGER,"
         "FOREIGN KEY (player_id) REFERENCES player_states(player_id))")
 
 
@@ -185,6 +185,8 @@ def get_credits(pid: int):
 def set_money(pid: int, amount: int):
     sql('UPDATE player_states SET money = ? WHERE player_id = ?', params=(amount, pid))
 
+def set_fabrics1(pid: int, amount: int):
+    sql('UPDATE player_states SET fabrics_1 = ? WHERE player_id = ?', params=(amount, pid))
 
 def credit_payoff(credit_id: int):
     sql('DELETE FROM credits WHERE id = ?', params=(credit_id,))
@@ -200,7 +202,12 @@ def take_credit(pid: int, amount: int, month: int):
 
 
 def build_fabric(pid: int, is_auto: bool, month: int):
-    sql('INSERT INTO construction VALUES (NULL, ?, ?, ?,?)', params=(pid, is_auto, month, -1))
+    month1=0
+    if(is_auto):
+        month1=month-5
+    else:
+        month1=month-7
+    sql('INSERT INTO construction VALUES (NULL, ?, ?, ?,?)', params=(pid, is_auto, month, month1))
 
 
 def check_month(pid: int, month: int):
@@ -211,16 +218,12 @@ def check_month(pid: int, month: int):
     else:
         return [False]
 
-
+def check_upgrade(pid: int, month: int):
+    query=sql('SELECT COUNT(id) FROM construction WHERE (start_month-init_month=9) AND start_month=? AND player_id=?',True,params=(month,pid))
+    return query==1
 def update_fabric(pid: int, month: int):
-    query = sql('SELECT id FROM construction WHERE player_id=? AND isAutomated=? ', True, params=(pid, 0))[0]
-    sql('UPDATE construction SET stop_month=? WHERE id=?', params=(month+9, query[0]))
-    sql('UPDATE construction SET isAutomated=? WHERE stop_month=? AND player_id=?', params=(1, month-1, pid))
-
-
-def check_stop_month(pid: int, month: int):
-    query = sql('SELECT stop_month FROM construction WHERE player_id=?', True, (pid,))
-    return month+1 in query
+        month1 = month - 9
+        sql('INSERT INTO construction VALUES (NULL, ?, ?, ?,?)', params=(pid, True, month, month1))
 
 
 def inc_game_turn(game_id: int):

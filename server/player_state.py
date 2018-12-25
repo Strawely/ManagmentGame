@@ -25,24 +25,23 @@ class PlayerState:
     # возвращает количество созданных ЕГП и затраченных денег
     def get_egp(self, quantity: int, fabrics_1: int, fabrics_2: int) -> (int, int):
         # todo Проверить количество денег
-        if quantity > self.esm or fabrics_1 > self.fabrics_1 + self.fabrics_2 or fabrics_2 > self.fabrics_2 \
-                or quantity > fabrics_1 + fabrics_2 * 2:
+        if fabrics_1 > self.fabrics_1 + self.fabrics_2 or fabrics_2 > self.fabrics_2:
             return 0
         produced_egp: int = fabrics_2 * 2
         cost: int = fabrics_2 * 3000
-        if produced_egp > quantity:
-            return 0
-        if quantity > produced_egp:
-            produced_egp += fabrics_1
-            cost += fabrics_1 * 2000
-            if produced_egp > quantity:
-                produced_egp = quantity
+        #if produced_egp > quantity:
+         #   return 0
+        #if quantity > produced_egp:
+        produced_egp += fabrics_1
+        cost += fabrics_1 * 2000
+          #  if produced_egp > quantity:
+           #     produced_egp = quantity
         if cost > self.money:
             return 0
-        if quantity == produced_egp:
-            self.esm -= produced_egp
-            self.egp += produced_egp
-            self.money -= cost
+        #if quantity == produced_egp:
+        self.esm -= produced_egp
+        self.egp += produced_egp
+        self.money -= cost
         # self.egp += produced_egp
         # self.esm -= produced_egp
         # self.money -= cost
@@ -67,16 +66,20 @@ class PlayerState:
 
     def build_fabric(self, is_auto: bool):
         if db_connector.check_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num+1)[0]:
-            if self.money > 5000 if db_connector.check_month(self.player_id,db_connector.get_game_pid(self.player_id).turn_num + 1)[1] else 2500:
-                db_connector.set_money(self.player_id, self.money - 5000 if db_connector.check_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num+1)[1] else 2500)
+            db_connector.set_money(self.player_id, self.money - 5000 if db_connector.check_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num+1)[1] else 2500)
         if self.money > 5000 if is_auto else 2500:
             db_connector.set_money(self.player_id, self.money - (5000 if is_auto else 2500))
         month = db_connector.get_game_pid(self.player_id).turn_num + 7 if is_auto else 5
         db_connector.build_fabric(self.player_id, is_auto, month)
 
     def upgrade_fabric(self):
-        db_connector.update_fabric(self.player_id,db_connector.get_game_pid(self.player_id).turn_num)
-        db_connector.set_money(self.player_id, self.money - 3500)
+        if db_connector.upgrade_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num)[0]:
+                db_connector.set_fabrics1(self.player_id,self.fabrics_1-1)
+                db_connector.set_money(self.player_id, self.money - 3500 if db_connector.check_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num+1)[1] else 2500)
+        if self.money > 3500:
+            db_connector.set_money(self.player_id, self.money - 3500)
+        month = db_connector.get_game_pid(self.player_id).turn_num + 9
+        db_connector.upgrade_fabric(self.player_id, month)
 
     def take_for_upgrade(self):
         if db_connector.check_stop_month(self.player_id, db_connector.get_game_pid(self.player_id).turn_num):
