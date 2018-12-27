@@ -211,11 +211,9 @@ def build_request(pid: int, is_auto: bool, is_skip: bool):
 
 
 @socket.on('upgrade_request')
-def upgrade_reqest(pid: int, do: bool):
+def upgrade_request(pid: int, do: bool):
     ps: PlayerState = db_connector.get_player_state_pid(pid)
-    if do:
-        ps.upgrade_fabric()
-    ps.take_for_upgrade()
+    ps.upgrade_fabric(do)
     if db_connector.get_game_pid(pid).update_progress():
         define_bankrupts(db_connector.get_game_pid(pid))
         emit('wait_next_turn', room=db_connector.get_game_id(pid))
